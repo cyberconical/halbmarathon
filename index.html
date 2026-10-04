@@ -210,6 +210,25 @@ details.rec-old summary{ cursor:pointer; color:var(--mute); font-size:14px; padd
 .goal-t small{ display:block; color:var(--mute); font-size:13px; }
 .goal.done .goal-t span{ text-decoration:line-through; color:var(--mute); }
 dialog.sheet{ overflow-y:auto; }
+.ov{ margin-top:18px; margin-bottom:34px; }
+.pills{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.pills::-webkit-scrollbar{ display:none; }
+.pill{ flex:0 0 auto; padding:9px 16px; border:2px solid var(--fg); background:var(--bg); border-radius:999px; font-weight:600; cursor:pointer; }
+.pill[aria-pressed="true"]{ background:var(--fg); color:var(--bg); }
+.ov-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:16px; }
+.ov-head h3{ font-size:24px; }
+.ov-head small{ display:block; color:var(--mute); font-size:13px; font-weight:400; font-stretch:100%; margin-top:4px; }
+.arrows{ display:flex; gap:6px; }
+.arrows button{ width:40px; height:40px; border:2px solid var(--fg); background:var(--bg); cursor:pointer; font-size:18px; font-weight:800; padding:0; border-radius:0; }
+.arrows button:disabled{ opacity:.3; cursor:default; }
+.ov-m{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+.ov-m span{ display:block; font-size:13px; color:var(--mute); }
+.ov-m b{ display:block; font-size:clamp(24px,7vw,34px); font-weight:800; font-stretch:70%; line-height:1.15; }
+.ov-cap{ margin:20px 0 4px; font-size:14px; color:var(--mute); }
+.ov-list{ margin-top:12px; }
+.ov-row{ display:grid; grid-template-columns:74px 1fr auto; gap:10px; align-items:center; padding:10px 0; border:0; border-bottom:1px solid var(--line); background:none; width:100%; text-align:left; font:inherit; color:inherit; }
+button.ov-row{ cursor:pointer; }
+.ov-row small{ color:var(--mute); }
 /* Sheet */
 dialog.sheet{
   border:0; border-top:2px solid var(--fg); padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));
@@ -294,6 +313,7 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
   <div class="tab" id="tab-stats" role="tabpanel" aria-labelledby="t-stats" hidden>
     <section>
       <div class="sec-head"><h2>Statistik</h2><small id="statRange"></small></div>
+      <div class="ov" id="overview"></div>
       <div class="kpis" id="kpis"></div>
       <div class="chart">
         <h3>Kilometer pro Woche</h3>
@@ -477,6 +497,7 @@ function normalize(x){
       {id:"leg-longest",sport:"lauf",key:"longest",name:"Längster Lauf",value:"14 km",date:"",former:true,ts:1},
       {id:"leg-10k",sport:"lauf",key:"10k",name:"10 km",value:"52:00",date:"",former:true,ts:2}] : []),
     goals: Array.isArray(x.goals) ? x.goals : [],
+    workouts: Array.isArray(x.workouts) ? x.workouts : [], dur: x.dur||{},
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
@@ -618,7 +639,8 @@ function sessHTML(s, open){
       <p class="err full"></p>
     </div>`;
   } else {
-    body+=`<div class="actions"><button class="btn ${done?"ghost":""}" type="button" data-kraft="${s.id}">${done?"Als offen markieren":"Als erledigt markieren"}</button></div>`;
+    body+=`<label class="lb" for="dur-${s.id}">Dauer in Minuten (optional)</label><input class="inp" type="text" inputmode="numeric" id="dur-${s.id}" value="${state.dur[s.id]||""}" placeholder="z. B. 90" style="max-width:160px;margin-bottom:12px">
+    <div class="actions"><button class="btn ${done?"ghost":""}" type="button" data-kraft="${s.id}">${done?"Als offen markieren":"Als erledigt markieren"}</button></div>`;
   }
   const custom = alt && !ALTS.includes(alt.what) ? alt.what : "";
   body+=`<div class="alt"><label class="lb">${s.kind==="run"?"Nicht gelaufen? Was hast du stattdessen gemacht?":"Stattdessen etwas anderes gemacht?"}</label>
@@ -771,6 +793,7 @@ function editHabitSheet(h){
 
 /* ---------- Stats tab ---------- */
 function renderStats(){
+  renderOverview();
   const runs=loggedRuns(), cw=currentWeek();
   const km=runs.reduce((s,r)=>s+r.log.km,0), sec=runs.reduce((s,r)=>s+r.log.sec,0);
   const paces=runs.map(r=>r.log.sec/r.log.km);
@@ -1070,6 +1093,125 @@ $("#reset").addEventListener("click", ()=>{
     state=normalize(null); persist(); render();
   }
 });
+/* ---------- Wochenübersicht je Sportart ---------- */
+const OVS = [["lauf","Laufen"],["boulder","Bouldern"],["kraft","Kraft"],["cali","Calisthenics"],["stretch","Stretching"],["other","Sonstiges"]];
+const ovName = k => (OVS.find(x=>x[0]===k)||[,""])[1];
+let ovSport="lauf", ovSel=11;
+function sportOfLabel(t){
+  const x=String(t||"").toLowerCase();
+  if(/sauna|ruhe|krank/.test(x)) return null;
+  if(/bould|kletter/.test(x)) return "boulder";
+  if(/calis/.test(x)) return "cali";
+  if(/stretch|dehn|mobil/.test(x)) return "stretch";
+  if(/kraft|gym/.test(x)) return "kraft";
+  return "other";
+}
+const weekStart = d => { const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); return addDays(x,-((x.getDay()+6)%7)); };
+function activities(){
+  const out=[];
+  loggedRuns().forEach(r=>out.push({sport:"lauf",date:r.date,km:r.log.km,sec:r.log.sec,title:`Lauf · ${fmtKm(r.log.km)} km · ${fmtDur(r.log.sec)}`,src:"run"}));
+  SESSIONS.forEach(s=>{
+    const alt=state.alt[s.id];
+    if(s.kind==="run"){
+      if(!state.logs[s.id] && alt){ const sp=sportOfLabel(alt.what); if(sp) out.push({sport:sp,date:s.date,min:0,title:alt.what,src:"alt"}); }
+      return;
+    }
+    if(state.strength[s.id]){ const m=state.dur[s.id]||0; const sp=sportOfLabel(s.label)||"other"; out.push({sport:sp,date:s.date,min:m,title:s.label+(m?` · ${m} Min.`:""),src:"plan"}); }
+    else if(alt){ const sp=sportOfLabel(alt.what); if(sp) out.push({sport:sp,date:s.date,min:0,title:alt.what,src:"alt"}); }
+  });
+  state.workouts.forEach(w=>{ if(!validKey(w.date)) return; out.push({sport:w.sport,date:fromKey(w.date),min:w.min||0,title:ovName(w.sport)+(w.min?` · ${w.min} Min.`:"")+(w.note?` · ${w.note}`:""),src:"free",id:w.id}); });
+  return out;
+}
+const inWeek = (acts,sport,ws) => { const we=addDays(ws,6); return acts.filter(a=>(sport==="all"||a.sport===sport)&&a.date>=ws&&a.date<=we); };
+const sumKm = l => l.reduce((a,x)=>a+(x.km||0),0);
+const sumSec = l => l.reduce((a,x)=>a+(x.sec||0)+(x.min||0)*60,0);
+const fmtSpan = sec => sec>=3600 ? Math.floor(sec/3600)+":"+String(Math.round(sec%3600/60)).padStart(2,"0")+" h" : Math.round(sec/60)+" Min.";
+
+function renderOverview(){
+  const acts=activities(), monThis=weekStart(today);
+  const weeks=Array.from({length:12},(_,i)=>addDays(monThis,-7*(11-i)));
+  const pills=[["all","Alle"],...OVS.filter(([k])=>k==="lauf"||acts.some(a=>a.sport===k))];
+  if(!pills.some(p=>p[0]===ovSport)) ovSport="lauf";
+  const isRun=ovSport==="lauf";
+  const vals=weeks.map(ws=>{ const l=inWeek(acts,ovSport,ws); return isRun?sumKm(l):l.length; });
+  const mx=Math.max(...vals);
+  const top=isRun?Math.max(10,Math.ceil(mx/5)*5):Math.max(4,Math.ceil(mx/2)*2);
+  const ticks=[0,top/2,top];
+  const W=360,H=196,x0=14,x1=290,yT=20,yB=150;
+  const X=i=>x0+i*(x1-x0)/11, Y=v=>yB-(v/top)*(yB-yT);
+  let g=ticks.map(t=>`<line x1="${x0}" x2="${x1+8}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${x1+16}" y="${Y(t)+4}" font-size="12" fill="var(--mute)" font-family="Archivo, sans-serif">${t===0?"0":(isRun?t+" km":t+"×")}</text>`).join("");
+  const mlabs=[]; weeks.forEach((ws,i)=>{ if(i===0||ws.getMonth()!==weeks[i-1].getMonth()) mlabs.push([i,MONTHS[ws.getMonth()].toUpperCase()]); });
+  if(mlabs.length>1 && mlabs[1][0]-mlabs[0][0]<3) mlabs.shift();
+  g+=mlabs.map(([i,t])=>`<text x="${X(i)}" y="182" text-anchor="middle" font-size="12" fill="var(--mute)" font-family="Archivo, sans-serif">${t}</text>`).join("");
+  g+=`<line x1="${X(ovSel)}" x2="${X(ovSel)}" y1="${yT-8}" y2="${yB}" stroke="var(--fg)" stroke-width="2"/>`;
+  g+=`<polyline points="${vals.map((v,i)=>`${X(i)},${Y(v)}`).join(" ")}" fill="none" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  g+=vals.map((v,i)=>i===ovSel
+    ? `<circle cx="${X(i)}" cy="${Y(v)}" r="12" fill="var(--soft)"/><circle cx="${X(i)}" cy="${Y(v)}" r="7" fill="var(--fg)"/>`
+    : `<circle cx="${X(i)}" cy="${Y(v)}" r="4" fill="var(--bg)" stroke="var(--fg)" stroke-width="2"/>`).join("");
+  g+=weeks.map((ws,i)=>`<rect x="${X(i)-13}" y="0" width="26" height="${H}" fill="transparent" data-ovwk="${i}"><title>${fmtDate(ws)}</title></rect>`).join("");
+
+  const ws=weeks[ovSel], we=addDays(ws,6), sel=inWeek(acts,ovSport,ws).sort((a,b)=>a.date-b.date);
+  const km=sumKm(sel), sec=sumSec(sel), n=sel.length;
+  const tm = sec>0 ? fmtSpan(sec) : (n?"–":"0 Min.");
+  const mets = isRun
+    ? [[fmtNum(km)+" km","Distanz"],[tm,"Zeit"],[km>0?fmtPace(sec/km):"–","Ø Pace /km"]]
+    : ovSport==="all"
+      ? [[String(n),"Einheiten"],[tm,"Zeit"],[fmtNum(km)+" km","Distanz"]]
+      : [[String(n),"Einheiten"],[tm,"Zeit"],[sec>0?fmtSpan(sec/Math.max(1,sel.filter(a=>a.min||a.sec).length)):"–","Ø Dauer"]];
+  const rows=sel.map(a=>{
+    const left=`<span>${WD[a.date.getDay()]} ${fmtDate(a.date)}</span><span>${esc(a.title)}${ovSport==="all"?` <small>· ${ovName(a.sport)}</small>`:""}</span><small>${a.src==="free"?"Ändern":""}</small>`;
+    return a.src==="free" ? `<button type="button" class="ov-row" data-editwo="${a.id}">${left}</button>` : `<div class="ov-row">${left}</div>`;
+  }).join("");
+  $("#overview").innerHTML=`
+    <div class="pills" role="group" aria-label="Sportart">${pills.map(([k,t])=>`<button type="button" class="pill" data-ovs="${k}" aria-pressed="${k===ovSport}">${t}</button>`).join("")}</div>
+    <div class="ov-head"><h3>${fmtDate(ws)} – ${fmtDate(we)} ${we.getFullYear()}${ovSel===11?`<small>Diese Woche</small>`:""}</h3>
+      <div class="arrows"><button type="button" data-ovprev aria-label="Vorherige Woche" ${ovSel===0?"disabled":""}>&#8249;</button><button type="button" data-ovnext aria-label="Nächste Woche" ${ovSel===11?"disabled":""}>&#8250;</button></div></div>
+    <div class="ov-m">${mets.map(([b,l])=>`<div><span>${l}</span><b>${b}</b></div>`).join("")}</div>
+    <p class="ov-cap">Letzte 12 Wochen · ${isRun?"Kilometer":"Einheiten"} pro Woche</p>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${isRun?"Kilometer":"Einheiten"} pro Woche in den letzten 12 Wochen">${g}</svg>
+    <div class="ov-list">${rows||`<p class="hint">Keine Einträge in dieser Woche.</p>`}</div>
+    <div class="actions" style="margin-top:14px"><button class="btn ghost" type="button" data-addwo>+ Einheit eintragen</button></div>
+    <p class="hint">Läufe trägst du im Tab Training ein. Alle Einträge zählen am geplanten Tag.</p>`;
+}
+function workoutSheet(w){
+  const x=w||{sport:(ovSport!=="all"&&ovSport!=="lauf")?ovSport:"boulder",date:dayKey(today),min:"",note:""};
+  openSheet(`<h3>${w?"Einheit bearbeiten":"Einheit eintragen"}</h3><p class="hint">Bouldern, Kraft, Calisthenics, Stretching und mehr. Läufe trägst du im Tab Training ein.</p>
+    <div class="chips" id="wSport">${OVS.filter(o=>o[0]!=="lauf").map(([k,n])=>`<button type="button" class="chip" data-ws="${k}" aria-pressed="${x.sport===k}">${n}</button>`).join("")}</div>
+    <label class="lb" for="wDate" style="margin-top:14px">Datum</label><input class="inp" id="wDate" type="date" value="${esc(x.date)}">
+    <label class="lb" for="wMin" style="margin-top:14px">Dauer in Minuten (optional)</label><input class="inp" id="wMin" type="text" inputmode="numeric" value="${x.min||""}" placeholder="z. B. 90">
+    <label class="lb" for="wNote" style="margin-top:14px">Notiz (optional)</label><input class="inp" id="wNote" type="text" maxlength="40" value="${esc(x.note||"")}" placeholder="z. B. Projekt 6B geschafft">
+    <p class="err" id="wErr"></p>
+    <div class="actions"><button class="btn" type="button" id="wSave">Speichern</button>${w?`<button class="btn ghost" type="button" id="wDel">Löschen</button>`:""}<button class="btn ghost" type="button" data-close>Abbrechen</button></div>`, null);
+  pickChip($("#wSport"),"data-ws");
+  $("#wSave").onclick=()=>{
+    const date=$("#wDate").value, mraw=$("#wMin").value.trim(), min=mraw?parseInt(mraw,10):0;
+    if(!validKey(date)){ $("#wErr").textContent="Bitte ein Datum wählen."; return; }
+    if(mraw && !(min>0&&min<=600)){ $("#wErr").textContent="Die Dauer muss zwischen 1 und 600 Minuten liegen."; return; }
+    const sp=$("#wSport").querySelector('[aria-pressed="true"]').dataset.ws;
+    const data={sport:sp,date,min:min||0,note:$("#wNote").value.trim()};
+    if(w) Object.assign(w,data); else state.workouts.push({id:uid(),...data,ts:Date.now()});
+    ovSport=sp;
+    const idx=Math.round((weekStart(fromKey(date))-weekStart(today))/DAY/7)+11; if(idx>=0&&idx<=11) ovSel=idx;
+    persist(); closeSheet(); renderOverview(); toast("Gespeichert.",ovName(sp)+" ist in deiner Übersicht.");
+  };
+  const del=$("#wDel"); if(del) del.onclick=()=>{ if(!confirm("Diese Einheit löschen?")) return; state.workouts=state.workouts.filter(y=>y!==w); persist(); closeSheet(); renderOverview(); };
+}
+document.addEventListener("click", e=>{
+  const t=e.target;
+  const sp=t.closest("[data-ovs]"); if(sp){ ovSport=sp.dataset.ovs; renderOverview(); return; }
+  const wk=t.closest("[data-ovwk]"); if(wk){ ovSel=+wk.dataset.ovwk; renderOverview(); return; }
+  if(t.closest("[data-ovprev]")){ ovSel=Math.max(0,ovSel-1); renderOverview(); return; }
+  if(t.closest("[data-ovnext]")){ ovSel=Math.min(11,ovSel+1); renderOverview(); return; }
+  if(t.closest("[data-addwo]")){ workoutSheet(null); return; }
+  const ew=t.closest("[data-editwo]"); if(ew){ const w=state.workouts.find(x=>x.id===ew.dataset.editwo); if(w) workoutSheet(w); return; }
+});
+document.addEventListener("change", e=>{
+  const t=e.target; if(!t.id||t.id.indexOf("dur-")!==0) return;
+  const id=t.id.slice(4), n=parseInt(String(t.value),10);
+  if(n>0&&n<=600) state.dur[id]=n; else { delete state.dur[id]; if(t.value.trim()) t.value=""; }
+  persist(); if(tab==="stats") renderOverview();
+});
+
 /* ---------- Einstellungen: Rekorde, Ziele, Profil ---------- */
 const SPORTS = [["lauf","Laufen"],["boulder","Bouldern"],["stretch","Stretching"],["cali","Calisthenics"]];
 const GSPORTS = [["allg","Allgemein"],...SPORTS];

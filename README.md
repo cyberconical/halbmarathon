@@ -25,6 +25,9 @@ Eine schlanke, schwarz-weiße Android-App für das Training zum Halbmarathon am 
 - Serien und Wochendurchschnitte auf einen Blick
 
 **Statistik und Learnings**
+- Wochenübersicht je Sportart: Auswahl Alle, Laufen, Bouldern, Kraft, Calisthenics, Stretching und Sonstiges
+- Pro Woche Distanz, Zeit und Pace beziehungsweise Einheiten und Dauer, dazu ein Verlauf der letzten 12 Wochen zum Antippen
+- Einheiten ohne Plan lassen sich jederzeit nachtragen, Dauer ist optional
 - Kilometer pro Woche, Pace-Verlauf, Knie-Verlauf
 - Vergleich nach Schuhtyp und Tageszeit
 - Learnings und Probleme festhalten, Probleme als gelöst markieren
@@ -99,7 +102,7 @@ Regeln:
 - Gib die vollständige, geänderte index.html zurück, nicht nur Ausschnitte.
 - Gespeicherte Daten müssen kompatibel bleiben. Der Speicherschlüssel
   "hm2027-state" und die vorhandenen Felder (logs, strength, alt, habits,
-  habitLog, learnings, profile, records, goals, updatedAt) dürfen nicht umbenannt oder entfernt
+  habitLog, learnings, profile, records, goals, workouts, dur, updatedAt) dürfen nicht umbenannt oder entfernt
   werden. Neue Felder sind optional und brauchen Standardwerte.
 - Die Skript-IDs "saved-data" und "app" und die Backup-Funktion bleiben
   erhalten. Das Skript "saved-data" bleibt im Original leer (null).
@@ -119,7 +122,7 @@ Beispiele für Wünsche: eine weitere Auswahl beim Lauf (zum Beispiel Wetter), e
 | `<style>` | Design, Farben als CSS-Variablen ganz oben |
 | HTML | Kopfleiste, drei Tabs (Training, Gewohnheiten, Statistik) und die Einstellungen |
 | Skript `app`, oben | Plan (`PLAN`, `PHASES`), Profil-Auswertung (`applyProfile`, daraus entstehen `START`, `RACE`, `SESSIONS`) |
-| Skript `app`, Mitte | Zustand (`state`), Speichern, Anzeige-Funktionen (`renderHero`, `renderWeek`, `renderPlan`, `renderHabits`, `renderStats`, `renderLearnings`, `renderSettings`) |
+| Skript `app`, Mitte | Zustand (`state`), Speichern, Anzeige-Funktionen (`renderHero`, `renderWeek`, `renderPlan`, `renderHabits`, `renderStats`, `renderOverview`, `renderLearnings`, `renderSettings`) |
 | Skript `app`, unten | Klick-Ereignisse, Backup speichern und laden |
 
 Alle Einträge stecken in einem Datensatz:
@@ -136,6 +139,8 @@ state = {
                 mon: "Kraft", tue: "Bouldern", fri: "Bouldern" },   // "Aus" = frei
   records:    [ { id, sport: "lauf"|"boulder"|"stretch"|"cali", key, name, value, date, former, ts } ],
   goals:      [ { id, sport: "allg"|"lauf"|..., text, due, done, ts } ],
+  workouts:   [ { id, sport: "boulder"|"kraft"|"cali"|"stretch"|"other", date, min, note, ts } ],
+  dur:        { "w3-tue": 75 },   // optionale Dauer in Minuten für Plan-Einheiten
   updatedAt:  <Zeitstempel>
 }
 ```
