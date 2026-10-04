@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Halbmarathon 4. April 2027</title>
+<title>Halbmarathon-Training</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
@@ -190,6 +190,26 @@ table.ht{ border-collapse:separate; border-spacing:0; }
 footer{ margin-top:56px; font-size:13px; color:var(--mute); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 footer button, footer label{ background:none; border:0; padding:0; text-decoration:underline; cursor:pointer; color:var(--mute); font-size:13px; }
 
+.topbar-r{ display:flex; gap:8px; align-items:center; }
+.iconbtn{ width:42px; height:42px; padding:0; border:2px solid var(--fg); background:var(--bg); color:var(--fg); display:grid; place-items:center; cursor:pointer; border-radius:0; }
+.iconbtn[aria-pressed="true"]{ background:var(--fg); color:var(--bg); }
+.rec-group{ margin-top:26px; }
+.rec-group h3{ font-size:22px; margin-bottom:4px; }
+.rec{ width:100%; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; padding:12px 0; background:none; border:0; border-bottom:1px solid var(--line); text-align:left; cursor:pointer; }
+.rec b{ font-weight:600; }
+.rec small{ display:block; color:var(--mute); font-size:13px; }
+.rec-v{ font-weight:800; font-stretch:75%; font-size:22px; text-align:right; }
+details.rec-old{ margin-top:4px; }
+details.rec-old summary{ cursor:pointer; color:var(--mute); font-size:14px; padding:8px 0; }
+.rec-old .rec-v{ color:var(--mute); }
+.goal{ display:grid; grid-template-columns:42px 1fr; gap:10px; align-items:center; border-bottom:1px solid var(--line); padding:10px 0; }
+.chk{ width:30px; height:30px; border:2px solid var(--fg); background:var(--bg); color:var(--bg); font-weight:800; cursor:pointer; display:grid; place-items:center; padding:0; border-radius:0; }
+.chk[aria-pressed="true"]{ background:var(--fg); color:var(--bg); }
+.goal-t{ background:none; border:0; text-align:left; cursor:pointer; padding:0; }
+.goal-t span{ display:block; font-weight:600; }
+.goal-t small{ display:block; color:var(--mute); font-size:13px; }
+.goal.done .goal-t span{ text-decoration:line-through; color:var(--mute); }
+dialog.sheet{ overflow-y:auto; }
 /* Sheet */
 dialog.sheet{
   border:0; border-top:2px solid var(--fg); padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));
@@ -222,7 +242,10 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">Halbmarathon<small id="sync">Wird automatisch gespeichert</small></div>
-    <button class="save" id="saveBtn" type="button">Alles gespeichert</button>
+    <div class="topbar-r">
+      <button class="iconbtn" id="settingsBtn" type="button" aria-label="Einstellungen" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="2" y1="5" x2="20" y2="5"/><line x1="2" y1="11" x2="20" y2="11"/><line x1="2" y1="17" x2="20" y2="17"/><circle cx="7" cy="5" r="2.5" fill="var(--bg)"/><circle cx="15" cy="11" r="2.5" fill="var(--bg)"/><circle cx="9" cy="17" r="2.5" fill="var(--bg)"/></svg></button>
+      <button class="save" id="saveBtn" type="button">Alles gespeichert</button>
+    </div>
   </div>
 </header>
 
@@ -239,23 +262,7 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
 
     <section id="thisweek"></section>
 
-    <section class="knee">
-      <div class="sec-head"><h2>Knie &amp; Kraft</h2><small>Kraft Mo, Bouldern Di &amp; Fr</small></div>
-      <p class="note">Deine Woche: Mo Kraft, Di Bouldern, Mi Lauf, Do Ruhe, Fr Bouldern, Sa Ruhe, So langer Lauf. Bouldern trainiert Oberkörper und Rumpf, kaum die Beine. Deshalb bleibt der Montag im Gym Pflicht. 2–3 Sätze je 10–15 Wiederholungen:</p>
-      <ol>
-        <li><b>Kniebeugen</b> (Goblet oder Beinpresse) – langsam runter, Knie über die Zehen.</li>
-        <li><b>Ausfallschritte rückwärts</b> – schont das Knie mehr als vorwärts.</li>
-        <li><b>Step-ups</b> auf eine Box – das Becken bleibt gerade.</li>
-        <li><b>Glute Bridge</b> einbeinig – stabile Hüfte heißt ruhiges Knie.</li>
-        <li><b>Seitliches Gehen mit Miniband</b> – kräftigt den mittleren Gesäßmuskel.</li>
-        <li><b>Wadenheben</b> einbeinig, langsam absenken.</li>
-        <li><b>Plank &amp; Seitstütz</b> – je 30–45 Sekunden.</li>
-      </ol>
-      <div class="box">
-        <b>Die Knie-Regel</b>
-        Leichtes Ziehen bis 2 von 10 ist okay. Wird es stärker oder ist es am nächsten Morgen schlimmer: 2–3 Tage Pause und die Vorwoche wiederholen. Der Plan hat Puffer.
-      </div>
-    </section>
+    <section class="knee" id="kraftSec"></section>
 
     <section>
       <div class="sec-head"><h2>Der ganze Plan</h2><small>27 Wochen</small></div>
@@ -298,8 +305,8 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
         <p>Minuten pro Kilometer. Höher heißt schneller.</p>
         <div id="chartPace"></div>
       </div>
-      <div class="chart">
-        <h3>Knie-Verlauf</h3>
+      <div class="chart" id="kneeChart">
+        <h3 id="kneeH">Knie-Verlauf</h3>
         <p>Ein Feld pro Lauf. Voll: alles gut. Halb: zieht leicht. ✕: Schmerzen.</p>
         <div id="kneeStrip"></div>
       </div>
@@ -326,6 +333,9 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
     </section>
   </div>
 
+  <!-- SETTINGS -->
+  <div class="tab" id="tab-settings" role="tabpanel" aria-label="Einstellungen" hidden><div id="settings"></div></div>
+
   <footer>
     <label>Backup laden<input type="file" id="importFile" accept=".html,.json,text/html,application/json" hidden></label>
     <button id="reset" type="button">Alle Daten löschen</button>
@@ -351,11 +361,12 @@ const PRISTINE = (()=>{ const c=document.documentElement.cloneNode(true); c.quer
 const $ = s => document.querySelector(s);
 
 /* ---------- Dates ---------- */
-const START = new Date(2026, 8, 28);
-const RACE  = new Date(2027, 3, 4);
+let START, RACE;
 const DAY = 86400000;
 const MONTHS = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const WDL = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const MONTHS_L = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
 const fmtDate = d => d.getDate()+". "+MONTHS[d.getMonth()];
 const dayKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -365,7 +376,7 @@ let today = todayNow();
 
 /* ---------- Plan ---------- */
 const PHASES = [
-  { name:"Comeback", weeks:[1,4],  text:"Laufen und Gehen im Wechsel. Knie, Sehnen und Bänder gewöhnen sich wieder an die Belastung. Tempo ist egal." },
+  { name:"Comeback", weeks:[1,4],  text:"Laufen und Gehen im Wechsel. Gelenke, Sehnen und Bänder gewöhnen sich wieder an die Belastung. Tempo ist egal." },
   { name:"Basis",    weeks:[5,10], text:"Durchgehend laufen, die langen Läufe wachsen. Erste spielerische Tempowechsel." },
   { name:"Aufbau",   weeks:[11,18],text:"Intervalle kommen dazu, der lange Lauf geht Richtung 90 Minuten." },
   { name:"Halbmarathon-Form", weeks:[19,25], text:"Tempo im Zielbereich und die längsten Läufe bis 2 Stunden." },
@@ -376,7 +387,7 @@ const PLAN = [
  ["Der erste Schritt", R("Laufen & Gehen",20,"5× (3 Min. locker laufen, 1 Min. gehen). Nur ankommen, Tempo egal."), R("Laufen & Gehen",24,"6× (3 Min. laufen, 1 Min. gehen).")],
  ["Rhythmus finden", R("Laufen & Gehen",25,"5× (4 Min. laufen, 1 Min. gehen)."), R("Laufen & Gehen",30,"5× (5 Min. laufen, 1 Min. gehen).")],
  ["Am Stück", R("Locker",25,"25 Min. locker am Stück. So langsam, dass du reden kannst."), R("Locker",35,"35 Min. locker, eine kurze Gehpause ist erlaubt.")],
- ["Durchatmen", R("Locker",25,"Entlastungswoche. 25 Min. ganz locker."), R("Locker",30,"30 Min. locker. Wie fühlt sich das Knie an?")],
+ ["Durchatmen", R("Locker",25,"Entlastungswoche. 25 Min. ganz locker."), R("Locker",30,"30 Min. locker. Wie fühlt sich dein Körper an?")],
  ["Basis legen", R("Locker + Steigerungen",30,"30 Min. locker, danach 4 Steigerungsläufe à 20 Sek."), R("Dauerlauf",45,"45 Min. im Plauder-Tempo.")],
  ["Mit Tempo spielen", R("Fahrtspiel",35,"10 Min. einlaufen, 15 Min. nach Lust Tempo anziehen und loslassen, 10 Min. auslaufen."), R("Dauerlauf",50,"50 Min. ruhig.")],
  ["Mehr Luft", R("Locker + Steigerungen",35,"35 Min. locker, danach 4 Steigerungsläufe."), R("Dauerlauf",55,"55 Min. ruhig.")],
@@ -393,7 +404,7 @@ const PLAN = [
  ["90 Minuten", R("Intervalle",50,"10 Min. ein, 6× 3 Min. zügig mit 1:30 Min. traben, 10 Min. aus."), R("Langer Lauf",90,"90 Min. ruhig.")],
  ["Zielbereich", R("Locker + Steigerungen",45,"45 Min. locker, danach 5 Steigerungsläufe."), R("Langer Lauf",95,"95 Min. ruhig.")],
  ["Durchatmen", R("Locker",40,"Entlastungswoche. 40 Min. locker."), R("Dauerlauf",70,"70 Min. locker.")],
- ["Renntempo lernen", R("HM-Tempo",50,"10 Min. ein, 2× 10 Min. im Halbmarathon-Tempo (ca. 5:40 /km) mit 3 Min. traben, 10 Min. aus."), R("Langer Lauf",100,"100 Min. ruhig.")],
+ ["Renntempo lernen", R("HM-Tempo",50,"10 Min. ein, 2× 10 Min. im Halbmarathon-Tempo (ca. {HMP} /km) mit 3 Min. traben, 10 Min. aus."), R("Langer Lauf",100,"100 Min. ruhig.")],
  ["Stark", R("Intervalle",50,"10 Min. ein, 4× 5 Min. zügig mit 2 Min. traben, 10 Min. aus."), R("Langer Lauf",110,"110 Min. ruhig.")],
  ["Der längste Lauf", R("HM-Tempo",45,"10 Min. ein, 20 Min. HM-Tempo am Stück, 10 Min. aus."), R("Langer Lauf",120,"2 Stunden. Kurze Gehpausen alle 30 Min. sind okay. Teste dein Wettkampf-Frühstück und Gel.")],
  ["Durchatmen", R("Locker",40,"Entlastungswoche. 40 Min. locker."), R("Dauerlauf",80,"80 Min. locker.")],
@@ -401,29 +412,71 @@ const PLAN = [
  ["Frisch werden", R("HM-Tempo kurz",40,"10 Min. ein, 3× 5 Min. HM-Tempo, 10 Min. aus."), R("Locker",70,"70 Min. locker. Die Arbeit ist gemacht.")],
  ["Race Week", R("Locker + Steigerungen",30,"30 Min. locker, 3 kurze Steigerungen. Viel schlafen."), R("HALBMARATHON",0,"21,1 km. Langsam anlaufen, ab km 15 darfst du drücken. Du hast dir das erarbeitet.")]
 ];
-const LINES = ["Jeder Lauf zählt. Auch der langsame.","Das war Training für dein Knie und deinen Kopf.","Konstanz schlägt Talent. Du bist konstant.","Wieder ein Baustein für den 4. April.","Der Körper erinnert sich. Er kommt zurück.","Stark. Genau so baust du auf.","Eingetragen. Der nächste Lauf wartet schon."];
+const LINES = ["Jeder Lauf zählt. Auch der langsame.","Das war Training für Körper und Kopf.","Konstanz schlägt Talent. Du bist konstant.","Wieder ein Baustein für den 4. April.","Der Körper erinnert sich. Er kommt zurück.","Stark. Genau so baust du auf.","Eingetragen. Der nächste Lauf wartet schon."];
 const ALTS = ["Sauna","Ruhetag","Schwimmen","Rad","Yoga","Krank"];
 const SHOES = [["barfuss","Barfußschuhe"],["normal","Normale Schuhe"]];
 const TODS = [["morgen","Morgens"],["mittag","Mittags"],["abend","Abends"],["nacht","Nachts"]];
 const labelOf = (list,v) => { const x=list.find(e=>e[0]===v); return x?x[1]:""; };
-const TAGS = ["Knie","Tempo","Ausrüstung","Ernährung","Erholung","Kopf","Sonstiges"];
+const TAGS = ["Tempo","Ausrüstung","Ernährung","Erholung","Kopf","Sonstiges"];
 
-const SESSIONS = [];
-PLAN.forEach((w,i)=>{
-  const wk=i+1, mon=addDays(START,i*7), late=wk>=26;
-  SESSIONS.push({id:`w${wk}-mon`,week:wk,kind:"kraft",day:"Mo",date:mon,t:late?"Kraft leicht":"Kraft: Knie & Hüfte",d:late?"Kurz und leicht, 30 Min. Keine neuen Übungen.":"Gym über Urban Sports. Die Übungen stehen unter Knie & Kraft. Dein wichtigster Knieschutz."});
-  SESSIONS.push({id:`w${wk}-tue`,week:wk,kind:"boulder",day:"Di",date:addDays(mon,1),t:wk<27?"Bouldern":"Bouldern locker",d:wk<27?"Abklettern statt abspringen, das schont das Knie. Danach 10 Min. Mobility für Hüfte und Beine.":"Nur leichte Routen. Kein Risiko mehr in der Race Week."});
-  SESSIONS.push({id:`w${wk}-wed`,week:wk,kind:"run",day:"Mi",date:addDays(mon,2),...w[1]});
-  if(wk<27) SESSIONS.push({id:`w${wk}-fri`,week:wk,kind:"boulder",day:"Fr",date:addDays(mon,4),t:"Bouldern",d:w[2].min>=90?"Vor dem langen Lauf eher kurz halten und die Beine schonen. Abklettern statt springen.":"Abklettern statt abspringen. Samstag ist Ruhetag, damit die Beine für Sonntag frisch sind."});
-  SESSIONS.push({id:`w${wk}-sun`,week:wk,kind:"run",day:"So",date:addDays(mon,6),race:wk===27,...w[2]});
-});
-const RUNS = SESSIONS.filter(s=>s.kind==="run");
+let SESSIONS = [], RUNS = [];
+const DAYCHOICES = ["Kraft","Bouldern","Calisthenics","Stretching","Yoga","Schwimmen","Rad","Aus"];
+const goalSec = () => state.profile.goalSec || 7200;
+const goalPace = () => goalSec()/21.0975;
+const prob = () => (state.profile.problem||"").trim();
+function applyProfile(){
+  const P=state.profile;
+  RACE=fromKey(P.raceDate);
+  START=addDays(addDays(RACE,-((RACE.getDay()+6)%7)),-26*7);
+  const hmp=fmtPace(goalPace());
+  const boulderish=lab=>/bouldern/i.test(lab);
+  SESSIONS=[];
+  PLAN.forEach((w,i)=>{
+    const wk=i+1, mon=addDays(START,i*7), late=wk>=26;
+    const run=(r,day,off,extra)=>({id:`w${wk}-${day}`,week:wk,kind:"run",day:day==="wed"?"Mi":"So",date:addDays(mon,off),...r,d:r.d.replace("{HMP}",hmp),...extra});
+    if(P.mon!=="Aus") SESSIONS.push({id:`w${wk}-mon`,week:wk,kind:"kraft",day:"Mo",date:mon,label:P.mon,
+      t:late?`${P.mon} leicht`:(P.mon==="Kraft"?"Kraft: Beine & Hüfte":P.mon),
+      d:late?"Kurz und leicht, 30 Min. Keine neuen Übungen.":(P.mon==="Kraft"?"Gym oder zu Hause. Die Übungen stehen unter Kraft & Stabilität. Dein wichtigster Schutz vor Überlastung.":"Zusatzeinheit, die dich stabil macht. Locker bis mittel, nicht bis zur Erschöpfung.")});
+    if(P.tue!=="Aus") SESSIONS.push({id:`w${wk}-tue`,week:wk,kind:"boulder",day:"Di",date:addDays(mon,1),label:P.tue,
+      t:wk<27?P.tue:`${P.tue} locker`,
+      d:wk===27?"Nur leicht. Kein Risiko mehr in der Race Week.":(boulderish(P.tue)?"Abklettern statt abspringen, das schont die Gelenke. Danach 10 Min. Mobility für Hüfte und Beine.":"Locker halten, damit die Beine für den Lauf frisch bleiben.")});
+    SESSIONS.push(run(w[1],"wed",2));
+    if(wk<27 && P.fri!=="Aus") SESSIONS.push({id:`w${wk}-fri`,week:wk,kind:"boulder",day:"Fr",date:addDays(mon,4),label:P.fri,t:P.fri,
+      d:boulderish(P.fri)?(w[2].min>=90?"Vor dem langen Lauf eher kurz halten und die Beine schonen. Abklettern statt springen.":"Abklettern statt abspringen. Samstag ist Ruhetag, damit die Beine für Sonntag frisch sind."):"Locker halten. Samstag ist Ruhetag, damit die Beine für Sonntag frisch sind."});
+    SESSIONS.push(run(w[2],"sun",6,{race:wk===27}));
+  });
+  RUNS=SESSIONS.filter(s=>s.kind==="run");
+}
+function weekTitle(w){
+  const t=PLAN[w-1][0], a=addDays(START,(w-1)*7);
+  const has=(m,d)=>{ for(let i=0;i<7;i++){ const x=addDays(a,i); if(x.getMonth()===m&&x.getDate()===d) return true; } return false; };
+  if(w===13 && !has(11,24)) return "Ruhig bleiben";
+  if(w===14 && !has(0,1)) return "Neuer Schwung";
+  return t;
+}
 
 /* ---------- State & storage ---------- */
 const KEY="hm2027-state";
+const validKey = k => typeof k==="string" && /^\d{4}-\d{2}-\d{2}$/.test(k);
+function defaultRaceDate(){ const t=todayNow(); const nextMon=addDays(t,7-((t.getDay()+6)%7)); return dayKey(addDays(nextMon,26*7+6)); }
 function normalize(x){
-  x = (x && typeof x==="object") ? x : {};
+  const had = !!(x && typeof x==="object");
+  x = had ? x : {};
+  const legacy = had && !!x.logs && !x.profile;   // Daten aus einer Version vor den Einstellungen
+  const p = x.profile || {};
   return {
+    profile: {
+      raceDate: validKey(p.raceDate) ? p.raceDate : (legacy ? "2027-04-04" : defaultRaceDate()),
+      goalSec: p.goalSec>0 ? p.goalSec : 7200,
+      problem: typeof p.problem==="string" ? p.problem : (legacy ? "Knie" : ""),
+      mon: DAYCHOICES.includes(p.mon) ? p.mon : "Kraft",
+      tue: DAYCHOICES.includes(p.tue) ? p.tue : (legacy ? "Bouldern" : "Aus"),
+      fri: DAYCHOICES.includes(p.fri) ? p.fri : (legacy ? "Bouldern" : "Aus")
+    },
+    records: Array.isArray(x.records) ? x.records : (legacy ? [
+      {id:"leg-longest",sport:"lauf",key:"longest",name:"Längster Lauf",value:"14 km",date:"",former:true,ts:1},
+      {id:"leg-10k",sport:"lauf",key:"10k",name:"10 km",value:"52:00",date:"",former:true,ts:2}] : []),
+    goals: Array.isArray(x.goals) ? x.goals : [],
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
@@ -501,14 +554,19 @@ function renderHero(){
   const total=runs.reduce((s,r)=>s+r.log.km,0);
   const days=Math.max(0,Math.round((RACE-today)/DAY));
   const lg=longest();
+  const recM=recLongest();
+  const goalTxt=`Ziel: ${fmtDur(goalSec())} am ${fmtDate(RACE)}.`;
   let lead;
-  if(!runs.length) lead = today < addDays(START,2)
-      ? "Am Mittwoch, 30. September, geht es los. 6 Monate Pause sind kein Neustart bei null: Du bist schon 14 km gelaufen und 10 km in 52 Minuten."
-      : "Trag deinen ersten Lauf ein. Ab da siehst du hier, wie du Woche für Woche zurückkommst.";
+  if(!runs.length){
+    const first=addDays(START,2);
+    lead = today < first
+      ? `Am ${WDL[first.getDay()]}, ${first.getDate()}. ${MONTHS_L[first.getMonth()]}, geht es los. ${recM>0?`Dein bisheriger Rekord liegt bei ${fmtKm(recM)} km, du fängst nicht bei null an. `:""}${goalTxt}`
+      : "Trag deinen ersten Lauf ein. Ab da siehst du hier, wie du Woche für Woche vorankommst.";
+  }
   else if(lg>=21.1) lead="21,1 km. Du hast es geschafft.";
-  else if(lg>14) lead=`Du bist weiter gelaufen als je zuvor. Noch ${fmtKm(21.1-lg)} km bis zum Ziel.`;
-  else if(lg>=10) lead="Zweistellig. Die 10 km sind zurück, und das Knie macht mit.";
-  else lead=`Dein längster Lauf seit dem Comeback: ${fmtKm(lg)} km. Die Linie unten wächst mit jedem Sonntag.`;
+  else if(recM>0 && lg>recM) lead=`Du bist weiter gelaufen als je zuvor. Noch ${fmtKm(21.1-lg)} km bis zum Ziel.`;
+  else if(lg>=10) lead="Zweistellig. Die 10 km sind geschafft.";
+  else lead=`Dein längster Lauf im Plan: ${fmtKm(lg)} km. Die Linie unten wächst mit jedem Sonntag.`;
   $("#lead").textContent=lead;
 
   const X=k=>20+k/21.1*960, fill=Math.min(lg,21.1);
@@ -521,11 +579,11 @@ function renderHero(){
     ${ticks}
     <line x1="${X(21.1)}" x2="${X(21.1)}" y1="10" y2="72" stroke="var(--fg)" stroke-width="3"/>
     <path d="M${X(21.1)} 10 h-34 l8 9 l-8 9 h34 z" fill="var(--fg)"/>
-    <line x1="${X(14)}" x2="${X(14)}" y1="30" y2="72" stroke="var(--fg)" stroke-width="2" stroke-dasharray="4 4"/>
-    ${lab(0,"0")}${lab(5,"5")}${lab(10,"10")}${lab(14,"14 alter Rekord","middle",24,600)}${lab(21.1,"21,1","end",100,800)}
+    ${recM>0&&recM<21.1?`<line x1="${X(recM)}" x2="${X(recM)}" y1="30" y2="72" stroke="var(--fg)" stroke-width="2" stroke-dasharray="4 4"/>`:""}
+    ${lab(0,"0")}${lab(5,"5")}${lab(10,"10")}${recM>0&&recM<21.1?lab(recM,"Rekord "+fmtKm(recM),recM>16?"end":"middle",24,600):""}${lab(21.1,"21,1","end",100,800)}
     ${lg>0?`<circle cx="${X(fill)}" cy="65" r="13" fill="var(--bg)" stroke="var(--fg)" stroke-width="4"/>
     <text x="${Math.min(X(fill),X(17))}" y="138" text-anchor="middle" font-size="24" font-weight="800" fill="var(--fg)" font-family="Archivo, sans-serif">${fmtKm(lg)} km</text>`:""}
-  </svg><div class="cap"><span>Längster Lauf seit Comeback</span><span>Ziel 4. April</span></div>`;
+  </svg><div class="cap"><span>Längster Lauf im Plan</span><span>Ziel ${fmtDate(RACE)}</span></div>`;
 
   $("#stats").innerHTML=`
     <div class="stat"><b>${runs.length}<small style="font-size:.5em;font-weight:600">/${RUNS.length}</small></b><span>Läufe</span></div>
@@ -540,7 +598,7 @@ function sessHTML(s, open){
   let right="";
   if(alt) right=`<span class="result">${esc(alt.what)}<br><span class="sess-sub">statt Plan</span></span>`;
   if(log) right=`<span class="result">${fmtKm(log.km)} km<br><span class="sess-sub">${fmtPace(log.sec/log.km)} /km</span></span>`;
-  let sub = s.kind==="run" ? (s.race?"21,1 km":s.min+" Min.") : s.kind==="boulder" ? "Ideal, aber optional" : "Urban Sports";
+  let sub = s.kind==="run" ? (s.race?"21,1 km":s.min+" Min.") : s.kind==="boulder" ? "Ideal, aber optional" : "Kraft & Stabilität";
   if(log){ const ex=[labelOf(SHOES,log.shoe),labelOf(TODS,log.tod)].filter(Boolean); if(ex.length) sub+=" · "+ex.join(" · "); }
   let body=`<p>${esc(s.d)}</p>`;
   if(s.kind==="run"){
@@ -550,8 +608,8 @@ function sessHTML(s, open){
       <div><label for="t-${s.id}">Zeit</label><input type="text" inputmode="numeric" id="t-${s.id}" placeholder="mm:ss" value="${l.sec?fmtDur(l.sec):""}"></div>
       <div class="full"><label>Wie hat es sich angefühlt?</label>
         <div class="seg" data-seg="feel">${["Zäh","Okay","Gut","Stark","Top"].map((t,i)=>`<button type="button" aria-pressed="${l.feel===i+1}" data-v="${i+1}">${t}</button>`).join("")}</div></div>
-      <div class="full"><label>Knie</label>
-        <div class="seg" data-seg="knee">${[["gut","Alles gut"],["zieht","Zieht leicht"],["schmerzt","Schmerzt"]].map(([v,t])=>`<button type="button" aria-pressed="${l.knee===v}" data-v="${v}">${t}</button>`).join("")}</div></div>
+      ${prob()?`<div class="full"><label>${esc(prob())}</label>
+        <div class="seg" data-seg="knee">${[["gut","Alles gut"],["zieht","Zieht leicht"],["schmerzt","Schmerzt"]].map(([v,t])=>`<button type="button" aria-pressed="${l.knee===v}" data-v="${v}">${t}</button>`).join("")}</div></div>`:""}
       <div class="full"><label>Schuhe</label>
         <div class="seg" data-seg="shoe">${SHOES.map(([v,t])=>`<button type="button" aria-pressed="${(l.shoe||(!log?lastShoe():null))===v}" data-v="${v}">${t}</button>`).join("")}</div></div>
       <div class="full"><label>Tageszeit</label>
@@ -585,7 +643,7 @@ function renderWeek(){
   const next = list.find(s=>s.kind==="run" && !state.logs[s.id] && !state.alt[s.id] && s.date>=today);
   const phase=PHASES.find(ph=>w>=ph.weeks[0]&&w<=ph.weeks[1]);
   $("#thisweek").innerHTML=`
-    <div class="sec-head"><h2>Woche ${w}: ${esc(p[0])}</h2><small>${fmtDate(addDays(START,(w-1)*7))} bis ${fmtDate(addDays(START,(w-1)*7+6))}<br>Phase ${esc(phase.name)}</small></div>
+    <div class="sec-head"><h2>Woche ${w}: ${esc(weekTitle(w))}</h2><small>${fmtDate(addDays(START,(w-1)*7))} bis ${fmtDate(addDays(START,(w-1)*7+6))}<br>Phase ${esc(phase.name)}</small></div>
     ${list.map(s=>sessHTML(s, openIds.has(s.id) || (openIds.size===0 && next && s.id===next.id))).join("")}`;
 }
 
@@ -598,7 +656,7 @@ function renderPlan(){
       const doneN=list.filter(s=>isDone(s)||state.alt[s.id]).length;
       const a=list.find(x=>x.day==="Mi"), b=list.find(x=>x.day==="So");
       rows+=`<details class="wk ${w===cw?"now":""}" data-week="${w}" ${openPlan.has(w)?"open":""}>
-        <summary><span class="wk-n">W${w}</span><span><b>${esc(PLAN[w-1][0])}</b><br><span class="wk-d">${fmtDate(addDays(START,(w-1)*7))} · Mi ${a.min} Min., So ${b.race?"21,1 km":b.min+" Min."}</span></span><span class="wk-bar" role="img" aria-label="${doneN} von ${list.length} erledigt"><i style="width:${doneN/list.length*100}%"></i></span></summary>
+        <summary><span class="wk-n">W${w}</span><span><b>${esc(weekTitle(w))}</b><br><span class="wk-d">${fmtDate(addDays(START,(w-1)*7))} · Mi ${a.min} Min., So ${b.race?"21,1 km":b.min+" Min."}</span></span><span class="wk-bar" role="img" aria-label="${doneN} von ${list.length} erledigt"><i style="width:${doneN/list.length*100}%"></i></span></summary>
         ${openPlan.has(w)?list.map(s=>sessHTML(s, openIds.has(s.id))).join(""):""}
       </details>`;
     }
@@ -726,11 +784,11 @@ function renderStats(){
     [km?fmtPace(sec/km):"–","Ø Pace /km"],
     [paces.length?fmtPace(Math.min(...paces)):"–","Schnellste Pace"],
     [runs.length?fmtKm(longest()):"–","Längster Lauf, km"],
-    [kneeN?Math.round(kneeOk/kneeN*100)+" %":"–","Knie ohne Beschwerden"],
+    prob()?[kneeN?Math.round(kneeOk/kneeN*100)+" %":"–",prob()+" ohne Beschwerden"]:null,
     [sessionsDue.length?Math.round(kept/sessionsDue.length*100)+" %":"–","Plan eingehalten"],
     [sec? (sec<3600? Math.round(sec/60)+" Min." : Math.floor(sec/3600)+":"+String(Math.round(sec%3600/60)).padStart(2,"0")+" h") :"–","Laufzeit gesamt"],
     [state.learnings.filter(l=>l.type==="issue"&&!l.solved).length,"Offene Probleme"]
-  ].map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
+  ].filter(Boolean).map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
 
   // km per week
   const perWeek=Array.from({length:27},()=>0);
@@ -751,12 +809,12 @@ function renderStats(){
   const el=$("#chartPace");
   if(runs.length<2){ el.innerHTML=`<div class="empty">Nach zwei Läufen siehst du hier deine Pace-Entwicklung.</div>`; }
   else{
-    const lo=Math.min(...paces,340)-15, hi=Math.max(...paces)+15;
+    const gp=goalPace(), lo=Math.min(...paces,gp)-15, hi=Math.max(...paces)+15;
     const PW=540,PH=220,L=44,Rr=12,T=16,B=30;
     const x=i=>L+i/(runs.length-1)*(PW-L-Rr), y=p=>T+(p-lo)/(hi-lo)*(PH-T-B);
     let g="";
     for(let p=Math.ceil(lo/30)*30;p<=hi;p+=30) g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(p)}" y2="${y(p)}" stroke="var(--line)"/><text x="${L-8}" y="${y(p)+4}" text-anchor="end" font-size="11" fill="var(--mute)" font-family="Archivo, sans-serif">${fmtPace(p)}</text>`;
-    g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(340)}" y2="${y(340)}" stroke="var(--fg)" stroke-dasharray="6 4"/><text x="${PW-Rr}" y="${y(340)-6}" text-anchor="end" font-size="11" font-weight="700" fill="var(--fg)" font-family="Archivo, sans-serif">Ziel unter 2 Std.</text>`;
+    g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(gp)}" y2="${y(gp)}" stroke="var(--fg)" stroke-dasharray="6 4"/><text x="${PW-Rr}" y="${y(gp)-6}" text-anchor="end" font-size="11" font-weight="700" fill="var(--fg)" font-family="Archivo, sans-serif">Ziel ${fmtDur(goalSec())} (${fmtPace(gp)}/km)</text>`;
     g+=`<polyline points="${paces.map((p,i)=>`${x(i)},${y(p)}`).join(" ")}" fill="none" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>`;
     const best=Math.min(...paces);
     paces.forEach((p,i)=>{ g+=`<circle cx="${x(i)}" cy="${y(p)}" r="${p===best?6:4}" fill="${p===best?"var(--fg)":"var(--bg)"}" stroke="var(--fg)" stroke-width="2"><title>${fmtDate(runs[i].date)}: ${fmtPace(p)} /km, ${fmtKm(runs[i].log.km)} km</title></circle>`; });
@@ -776,12 +834,13 @@ function renderStats(){
     const [name,list]=g; if(!list.length) return "";
     const k=list.reduce((a,r)=>a+r.log.km,0), sc=list.reduce((a,r)=>a+r.log.sec,0);
     const kn=list.filter(r=>r.log.knee), ok=kn.filter(r=>r.log.knee==="gut").length;
-    return `<tr><td>${name}</td><td>${list.length}</td><td>${fmtPace(sc/k)}</td><td>${kn.length?Math.round(ok/kn.length*100)+" %":"–"}</td></tr>`;
+    return `<tr><td>${name}</td><td>${list.length}</td><td>${fmtPace(sc/k)}</td>${prob()?`<td>${kn.length?Math.round(ok/kn.length*100)+" %":"–"}</td>`:""}</tr>`;
   }).join("");
   $("#compare").innerHTML = any
-    ? `<table class="cmp"><thead><tr><th scope="col">Gruppe</th><th scope="col">Läufe</th><th scope="col">Ø Pace</th><th scope="col">Knie ok</th></tr></thead><tbody>${rowsC}</tbody></table><p class="hint">Mit wenigen Läufen sagt das noch nichts. Die Pace hängt auch von der Einheit ab, ein Intervalltraining ist schneller als ein lockerer Lauf.</p>`
+    ? `<table class="cmp"><thead><tr><th scope="col">Gruppe</th><th scope="col">Läufe</th><th scope="col">Ø Pace</th>${prob()?`<th scope="col">${esc(prob())} ok</th>`:""}</tr></thead><tbody>${rowsC}</tbody></table><p class="hint">Mit wenigen Läufen sagt das noch nichts. Die Pace hängt auch von der Einheit ab, ein Intervalltraining ist schneller als ein lockerer Lauf.</p>`
     : `<div class="empty">Wähle beim Eintragen eines Laufs Schuhe und Tageszeit, dann siehst du hier den Vergleich.</div>`;
 
+  $("#kneeChart").hidden=!prob(); $("#kneeH").textContent=prob()+"-Verlauf";
   renderLearnings();
 }
 
@@ -799,26 +858,34 @@ function renderLearnings(){
     </article>`).join("")
     : `<div class="empty" style="margin-top:12px">${f==="open"?"Keine offenen Probleme.":f==="solved"?"Noch nichts gelöst.":"Notiere hier, was dir beim Training auffällt. Probleme kannst du später als gelöst markieren."}</div>`;
 }
-$("#lTags").innerHTML=TAGS.map(t=>`<button type="button" class="chip" data-ltag="${t}" aria-pressed="false">${t}</button>`).join("");
+function renderTags(){
+  const sel=document.querySelector('[data-ltag][aria-pressed="true"]'), cur=sel?sel.dataset.ltag:null;
+  const list=[...(prob()?[prob()]:[]),...TAGS];
+  $("#lTags").innerHTML=list.map(t=>`<button type="button" class="chip" data-ltag="${esc(t)}" aria-pressed="${t===cur}">${esc(t)}</button>`).join("");
+}
 
 /* ---------- Tabs ---------- */
-const TABS=["training","habits","stats"];
-let tab="training";
-try{ const t=localStorage.getItem(KEY+"-tab"); if(TABS.includes(t)) tab=t; }catch(e){}
+const TABS=["training","habits","stats","settings"];
+let tab="training", lastTab="training";
+try{ const t=localStorage.getItem(KEY+"-tab"); if(["training","habits","stats"].includes(t)) tab=t; }catch(e){}
 function showTab(t, scroll){
+  if(t!=="settings") lastTab=t;
   tab=t;
-  TABS.forEach(n=>{ $("#tab-"+n).hidden = n!==t; $("#t-"+n).setAttribute("aria-selected", String(n===t)); });
-  try{ localStorage.setItem(KEY+"-tab",t); }catch(e){}
+  TABS.forEach(n=>{ $("#tab-"+n).hidden = n!==t; const b=$("#t-"+n); if(b) b.setAttribute("aria-selected", String(n===t)); });
+  $("#settingsBtn").setAttribute("aria-pressed", String(t==="settings"));
+  try{ if(t!=="settings") localStorage.setItem(KEY+"-tab",t); }catch(e){}
   if(t==="habits") renderHabits();
   if(t==="stats") renderStats();
+  if(t==="settings") renderSettings();
   if(scroll) window.scrollTo(0,0);
 }
 
 function render(){
   today=todayNow();
-  renderHero(); renderWeek(); renderPlan();
+  renderHero(); renderWeek(); renderPlan(); renderKraft(); renderTags();
   if(tab==="habits") renderHabits();
   if(tab==="stats") renderStats();
+  if(tab==="settings") renderSettings();
 }
 
 /* ---------- Toast & praise ---------- */
@@ -832,15 +899,15 @@ function praise(id, entry){
   const pace=entry.sec/entry.km, others=loggedRuns().filter(r=>r.id!==id);
   const prevLong=others.reduce((m,r)=>Math.max(m,r.log.km),0);
   const prevBest=others.length?Math.min(...others.map(r=>r.log.sec/r.log.km)):Infinity;
-  const s=RUNS.find(r=>r.id===id);
+  const s=RUNS.find(r=>r.id===id), rm=recLongest();
   if(s.race && entry.km>=21) return ["Finisher.", `21,1 km in ${fmtDur(entry.sec)}. Du bist Halbmarathon-Läufer.`];
   if(entry.knee==="schmerzt") return ["Danke, dass du ehrlich bist.", "2–3 Tage Pause, dann die Vorwoche wiederholen. Tipp: Notiere es unter Statistik als Problem."];
-  if(!others.length) return ["Du bist zurück.", "Der erste Lauf nach 6 Monaten. Der schwerste Schritt ist gemacht."];
-  if(entry.km>14 && prevLong<=14) return ["Neuer Rekord!", `${fmtKm(entry.km)} km – weiter als je zuvor.`];
-  if(entry.km>=10 && prevLong<10) return ["Zweistellig.", "Die 10 km sind zurück. Das Knie macht mit."];
-  if(entry.km>prevLong) return ["Längster Lauf seit dem Comeback.", `${fmtKm(entry.km)} km. Die Linie ist gerade gewachsen.`];
+  if(!others.length) return ["Der erste Lauf.", "Der schwerste Schritt ist gemacht. Ab jetzt zählt Dranbleiben."];
+  if(rm>0 && entry.km>Math.max(prevLong,rm)) return ["Neuer Rekord!", `${fmtKm(entry.km)} km – weiter als je zuvor. Er steht jetzt unter Einstellungen bei deinen Rekorden.`];
+  if(entry.km>=10 && prevLong<10) return ["Zweistellig.", prob()?`Die 10 km sind geschafft. ${prob()} macht mit.`:"Die 10 km sind geschafft."];
+  if(entry.km>prevLong) return ["Längster Lauf im Plan.", `${fmtKm(entry.km)} km. Die Linie ist gerade gewachsen.`];
   if(pace<prevBest && entry.km>=3) return ["Schnellste Pace bisher.", `${fmtPace(pace)} pro Kilometer.`];
-  if(entry.knee==="zieht") return ["Gut gemacht.", "Behalte das Knie im Blick und gib den Kraft-Tagen extra Aufmerksamkeit."];
+  if(entry.knee==="zieht") return ["Gut gemacht.", `Behalte ${prob()||"die Stelle"} im Blick und gib den Kraft-Tagen extra Aufmerksamkeit.`];
   return ["Eingetragen.", LINES[Math.floor(Math.random()*LINES.length)]];
 }
 function setAlt(id, what){
@@ -887,16 +954,19 @@ document.addEventListener("click", e=>{
     const err=form.querySelector(".err");
     if(!km){ err.textContent="Trag die Kilometer als Zahl ein, z. B. 5,2."; return; }
     if(!sec){ err.textContent="Trag die Zeit als mm:ss ein, z. B. 31:40, oder als h:mm:ss."; return; }
-    const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:segValue(form.querySelector('[data-seg="knee"]')),shoe:segValue(form.querySelector('[data-seg="shoe"]')),tod:segValue(form.querySelector('[data-seg="tod"]')),ts:Date.now()};
+    const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:(()=>{const k=form.querySelector('[data-seg="knee"]');return k?segValue(k):null;})(),shoe:segValue(form.querySelector('[data-seg="shoe"]')),tod:segValue(form.querySelector('[data-seg="tod"]')),ts:Date.now()};
     const msg=praise(id, entry);
-    state.logs[id]=entry; delete state.alt[id]; persist(); openIds.delete(id); render(); toast(...msg); return;
+    const prevL=loggedRuns().filter(r=>r.id!==id).reduce((m,r)=>Math.max(m,r.log.km),0), rm=recLongest();
+    state.logs[id]=entry; delete state.alt[id];
+    if(rm>0 && km>Math.max(prevL,rm)) addRecord({id:uid(),sport:"lauf",key:"longest",name:"Längster Lauf",value:fmtKm(km)+" km",date:dayKey(today),former:false,ts:Date.now()});
+    persist(); openIds.delete(id); render(); toast(...msg); return;
   }
   const del=t.closest("[data-del]"); if(del){ delete state.logs[del.dataset.del]; persist(); render(); return; }
   const kr=t.closest("[data-kraft]");
   if(kr){
     const id=kr.dataset.kraft; delete state.alt[id];
     if(state.strength[id]) delete state.strength[id];
-    else { state.strength[id]=true; /(tue|fri)$/.test(id) ? toast("Bouldern erledigt.","Griffkraft, Rumpf, Kopf. Das hilft dir auch auf Kilometer 18.") : toast("Kraft erledigt.","Dein Knie sagt danke."); }
+    else { state.strength[id]=true; const ss=SESSIONS.find(x=>x.id===id), lb=ss?ss.label:"Einheit"; toast(lb+" erledigt.", /bouldern/i.test(lb)?"Griffkraft, Rumpf, Kopf. Das hilft dir auch auf Kilometer 18.":"Stabilität zahlt sich auf den langen Läufen aus."); }
     persist(); openIds.delete(id); render(); return;
   }
 
@@ -1000,9 +1070,202 @@ $("#reset").addEventListener("click", ()=>{
     state=normalize(null); persist(); render();
   }
 });
+/* ---------- Einstellungen: Rekorde, Ziele, Profil ---------- */
+const SPORTS = [["lauf","Laufen"],["boulder","Bouldern"],["stretch","Stretching"],["cali","Calisthenics"]];
+const GSPORTS = [["allg","Allgemein"],...SPORTS];
+const PRESETS = {
+  lauf:[["longest","Längster Lauf","z. B. 14 km"],["5k","5 km","z. B. 24:30"],["10k","10 km","z. B. 52:00"],["hm","Halbmarathon","z. B. 1:58:30"],["m","Marathon","z. B. 4:10:00"]],
+  boulder:[["","Höchster Grad Flash","z. B. 6B"],["","Höchster Grad Top","z. B. 6C"],["","Boulder pro Session","z. B. 12"]],
+  stretch:[["","Vorbeuge","z. B. Hände am Boden"],["","Frontspagat","z. B. 10 cm zum Boden"],["","Seitspagat","z. B. 15 cm zum Boden"],["","Brücke","z. B. Arme gestreckt"]],
+  cali:[["","Klimmzüge","z. B. 12 Wdh."],["","Liegestütze","z. B. 40 Wdh."],["","Dips","z. B. 20 Wdh."],["","Plank","z. B. 3:00 Min."],["","Handstand","z. B. 30 Sek."],["","Muscle-up","z. B. 3 Wdh."],["","L-Sit","z. B. 20 Sek."]]
+};
+const sportName = k => (GSPORTS.find(x=>x[0]===k)||[,""])[1];
+const recLongest = () => state.records.filter(r=>r.sport==="lauf"&&r.key==="longest").reduce((m,r)=>Math.max(m,parseNum(r.value)||0),0);
+function addRecord(r){
+  let demoted=0;
+  if(!r.former) state.records.forEach(o=>{ if(o!==r && !o.former && o.sport===r.sport && o.name.toLowerCase()===r.name.toLowerCase()){ o.former=true; demoted++; } });
+  if(!state.records.includes(r)) state.records.push(r);
+  return demoted;
+}
+function parseGoal(v){
+  const p=String(v).trim().replace(/[.,]/g,":").split(":").map(Number);
+  if(!p.length||p.some(n=>!isFinite(n)||n<0)) return null;
+  const sec = p.length===3 ? p[0]*3600+p[1]*60+p[2] : p.length===2 ? p[0]*3600+p[1]*60 : p[0]*60;
+  return sec>=3000 && sec<=4*3600 ? Math.round(sec) : null;
+}
+const fmtLongDate = k => { const d=fromKey(k); return `${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+
+function renderKraft(){
+  const P=state.profile, pr=prob(), lab=v=>v==="Aus"?"frei":v;
+  const week=`Mo ${lab(P.mon)}, Di ${lab(P.tue)}, Mi Lauf, Do Ruhe, Fr ${lab(P.fri)}, Sa Ruhe, So langer Lauf`;
+  const bould=[P.tue,P.fri].some(v=>/bouldern/i.test(v));
+  $("#kraftSec").innerHTML=`<div class="sec-head"><h2>Kraft &amp; Stabilität</h2><small>Wochenrhythmus</small></div>
+    <p class="note">Deine Woche: ${esc(week)}. ${bould?"Bouldern trainiert Oberkörper und Rumpf, kaum die Beine. Deshalb sind Kraft-Einheiten für die Beine wichtig. ":""}Dein Rhythmus ist in den Einstellungen änderbar. Übungen, 2–3 Sätze je 10–15 Wiederholungen:</p>
+    <ol>
+      <li><b>Kniebeugen</b> (Goblet oder Beinpresse) – langsam runter, Knie über die Zehen.</li>
+      <li><b>Ausfallschritte rückwärts</b> – schont das Knie mehr als vorwärts.</li>
+      <li><b>Step-ups</b> auf eine Box – das Becken bleibt gerade.</li>
+      <li><b>Glute Bridge</b> einbeinig – stabile Hüfte, ruhige Gelenke.</li>
+      <li><b>Seitliches Gehen mit Miniband</b> – kräftigt den mittleren Gesäßmuskel.</li>
+      <li><b>Wadenheben</b> einbeinig, langsam absenken.</li>
+      <li><b>Plank &amp; Seitstütz</b> – je 30–45 Sekunden.</li>
+    </ol>
+    <div class="box"><b>${pr?`Die Regel für ${esc(pr)}`:"Die Regel bei Beschwerden"}</b>Leichtes Ziehen bis 2 von 10 ist okay. Wird es stärker oder ist es am nächsten Morgen schlimmer: 2–3 Tage Pause und die Vorwoche wiederholen. Der Plan hat Puffer.</div>`;
+}
+
+function planInfo(){
+  const weeks=Math.ceil((RACE-today)/DAY/7), out=[`Planstart: Montag, ${START.getDate()}. ${MONTHS_L[START.getMonth()]} ${START.getFullYear()}.`];
+  if(RACE<today) out.push("Der Wettkampftag liegt in der Vergangenheit.");
+  else if(weeks<27) out.push(`Bis zum Wettkampf bleiben ${weeks} Wochen, weniger als die 27 Wochen des Plans. Du steigst in Woche ${currentWeek()} ein.`);
+  else if(weeks>27) out.push(`Bis zum Wettkampf sind es ${weeks} Wochen. Der 27-Wochen-Plan beginnt erst zum Planstart.`);
+  else out.push("Genau 27 Wochen bis zum Wettkampf.");
+  if(RACE.getDay()!==0) out.push(`Dein Wettkampftag ist ein ${WDL[RACE.getDay()]}. Im Plan steht der Wettkampf auf dem Sonntag der Race Week.`);
+  return out.join(" ");
+}
+function recRow(r){
+  return `<button type="button" class="rec" data-editrec="${r.id}"><span><b>${esc(r.name)}</b>${r.date?`<small>${esc(fmtLongDate(r.date))}</small>`:""}</span><span class="rec-v">${esc(r.value)}</span></button>`;
+}
+function dayChips(day,label){
+  return `<div class="full"><label>${label}</label><div class="chips">${DAYCHOICES.map(c=>`<button type="button" class="chip" aria-pressed="${state.profile[day]===c}" data-sday="${day}" data-v="${c}">${c}</button>`).join("")}</div></div>`;
+}
+function renderSettings(){
+  const P=state.profile;
+  const goals=[...state.goals].sort((a,b)=>(a.done-b.done)||((a.due||"9999")>(b.due||"9999")?1:-1));
+  const open=goals.filter(g=>!g.done).length;
+  $("#settings").innerHTML=`
+    <section>
+      <div class="sec-head"><h2>Einstellungen</h2><small>Speichert automatisch</small></div>
+      <p class="note">Hier stellst du die App auf dich ein. Alle bisherigen Einträge bleiben erhalten.</p>
+    </section>
+    <section>
+      <div class="sec-head"><h2>Dein Ziel</h2></div>
+      <div class="form" style="margin-top:16px">
+        <div><label for="sRace">Wettkampftag</label><input class="inp" type="date" id="sRace" value="${esc(P.raceDate)}"></div>
+        <div><label for="sGoal">Zielzeit Halbmarathon</label><input class="inp" type="text" inputmode="numeric" id="sGoal" value="${fmtDur(goalSec())}" placeholder="h:mm:ss"></div>
+        <p class="hint full" style="margin:0">Zielpace: ${fmtPace(goalPace())} min/km. ${esc(planInfo())}</p>
+        <p class="err full" id="sErr"></p>
+      </div>
+    </section>
+    <section>
+      <div class="sec-head"><h2>Training</h2><small>Läufe: Mi &amp; So</small></div>
+      <div class="form" style="margin-top:16px">
+        <div class="full"><label for="sProb">Stelle, die du beobachten willst</label><input class="inp" type="text" id="sProb" maxlength="20" value="${esc(P.problem)}" placeholder="z. B. Knie, Achillessehne">
+          <p class="hint">Bei jedem Lauf fragt die App, wie sich die Stelle anfühlt. Leer lassen schaltet das ab.</p></div>
+        ${dayChips("mon","Montag")}${dayChips("tue","Dienstag")}${dayChips("fri","Freitag")}
+      </div>
+    </section>
+    <section>
+      <div class="sec-head"><h2>Rekorde</h2><small>je Sportart</small></div>
+      <p class="hint">Aktuelle Rekorde stehen oben, frühere darunter. Trägst du für dieselbe Disziplin einen neuen Rekord ein, rutscht der alte automatisch zu „Früher“.</p>
+      ${SPORTS.map(([k,name])=>{
+        const cur=state.records.filter(r=>r.sport===k&&!r.former).sort((a,b)=>a.name.localeCompare(b.name,"de"));
+        const old=state.records.filter(r=>r.sport===k&&r.former).sort((a,b)=>(b.date||"")>(a.date||"")?1:(b.date||"")<(a.date||"")?-1:b.ts-a.ts);
+        return `<div class="rec-group"><h3>${name}</h3>
+          ${cur.length?cur.map(recRow).join(""):`<p class="hint">Noch kein aktueller Rekord.</p>`}
+          ${old.length?`<details class="rec-old"><summary>Frühere Rekorde (${old.length})</summary>${old.map(recRow).join("")}</details>`:""}
+          <button class="linkbtn" type="button" data-addrec="${k}">+ Rekord hinzufügen</button></div>`;
+      }).join("")}
+    </section>
+    <section>
+      <div class="sec-head"><h2>Ziele</h2><small>${open} offen</small></div>
+      ${goals.length?goals.map(g=>`<div class="goal ${g.done?"done":""}">
+        <button type="button" class="chk" data-gdone="${g.id}" aria-pressed="${!!g.done}" aria-label="Erledigt">${g.done?"✓":""}</button>
+        <button type="button" class="goal-t" data-editgoal="${g.id}"><span>${esc(g.text)}</span><small>${esc([sportName(g.sport),g.due?"bis "+fmtLongDate(g.due):""].filter(Boolean).join(" · "))}</small></button></div>`).join(""):`<div class="empty" style="margin-top:16px">Noch keine Ziele. Zum Beispiel „10 Klimmzüge“ oder „Spagat“.</div>`}
+      <div class="actions" style="margin-top:16px"><button class="btn ghost" type="button" data-addgoal>Ziel hinzufügen</button></div>
+    </section>`;
+}
+
+function pickChip(container, attr){
+  container.addEventListener("click", e=>{
+    const b=e.target.closest("["+attr+"]"); if(!b) return;
+    container.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+  });
+}
+function recordSheet(rec, sport){
+  const r=rec||{sport:sport||"lauf",name:"",value:"",date:"",former:false};
+  openSheet(`<h3>${rec?"Rekord bearbeiten":"Neuer Rekord"}</h3><p class="hint">Sportart wählen, dann Disziplin und Wert.</p>
+    <div class="chips" id="rSport">${SPORTS.map(([k,n])=>`<button type="button" class="chip" data-rs="${k}" aria-pressed="${r.sport===k}">${n}</button>`).join("")}</div>
+    <label class="lb" for="rName" style="margin-top:14px">Disziplin</label><input class="inp" id="rName" type="text" maxlength="40" value="${esc(r.name)}" placeholder="z. B. Klimmzüge">
+    <div class="chips" id="rPresets" style="margin-top:8px"></div>
+    <label class="lb" for="rVal" style="margin-top:14px">Wert</label><input class="inp" id="rVal" type="text" maxlength="24" value="${esc(r.value)}" placeholder="z. B. 12 Wdh.">
+    <label class="lb" for="rDate" style="margin-top:14px">Datum (optional)</label><input class="inp" id="rDate" type="date" value="${esc(r.date||"")}">
+    <label class="lb" style="margin-top:14px">Art</label>
+    <div class="seg" id="rFormer"><button type="button" data-v="cur" aria-pressed="${!r.former}">Aktuell</button><button type="button" data-v="old" aria-pressed="${!!r.former}">Früher</button></div>
+    <p class="err" id="rErr"></p>
+    <div class="actions"><button class="btn" type="button" id="rSave">Speichern</button>${rec?`<button class="btn ghost" type="button" id="rDel">Löschen</button>`:""}<button class="btn ghost" type="button" data-close>Abbrechen</button></div>`, rec?null:"#rName");
+  const fill=k=>{ $("#rPresets").innerHTML=(PRESETS[k]||[]).map(([key,n,h])=>`<button type="button" class="chip" data-preset="${esc(n)}" data-hint="${esc(h)}">${esc(n)}</button>`).join(""); };
+  fill(r.sport);
+  pickChip($("#rSport"),"data-rs");
+  $("#rSport").addEventListener("click", e=>{ const b=e.target.closest("[data-rs]"); if(b) fill(b.dataset.rs); });
+  $("#rPresets").addEventListener("click", e=>{ const b=e.target.closest("[data-preset]"); if(!b) return; $("#rName").value=b.dataset.preset; $("#rVal").placeholder=b.dataset.hint; $("#rVal").focus(); });
+  $("#rSave").onclick=()=>{
+    const sp=$("#rSport").querySelector('[aria-pressed="true"]').dataset.rs;
+    const name=$("#rName").value.trim(), value=$("#rVal").value.trim(), date=$("#rDate").value||"";
+    if(!name){ $("#rErr").textContent="Gib die Disziplin an."; return; }
+    if(!value){ $("#rErr").textContent="Trag den Wert ein."; return; }
+    const former=segValue($("#rFormer"))==="old";
+    const pre=(PRESETS[sp]||[]).find(x=>x[1].toLowerCase()===name.toLowerCase());
+    const data={sport:sp,name,value,date,former,key:pre?pre[0]:""};
+    let target=rec;
+    if(target) Object.assign(target,data); else target={id:uid(),...data,ts:Date.now()};
+    const demoted=addRecord(target);
+    persist(); closeSheet(); render();
+    toast(former?"Früherer Rekord gespeichert.":"Rekord gespeichert.", demoted?"Der alte Rekord steht jetzt unter Früher.":"Er erscheint unter Einstellungen.");
+  };
+  const del=$("#rDel"); if(del) del.onclick=()=>{ if(!confirm("Diesen Rekord löschen?")) return; state.records=state.records.filter(x=>x!==rec); persist(); closeSheet(); render(); };
+}
+function goalSheet(g){
+  const x=g||{sport:"allg",text:"",due:""};
+  openSheet(`<h3>${g?"Ziel bearbeiten":"Neues Ziel"}</h3>
+    <label class="lb" for="gText">Ziel</label><input class="inp" id="gText" type="text" maxlength="80" value="${esc(x.text)}" placeholder="z. B. 10 Klimmzüge am Stück">
+    <label class="lb" style="margin-top:14px">Sportart</label>
+    <div class="chips" id="gSport">${GSPORTS.map(([k,n])=>`<button type="button" class="chip" data-gs="${k}" aria-pressed="${x.sport===k}">${n}</button>`).join("")}</div>
+    <label class="lb" for="gDue" style="margin-top:14px">Bis wann (optional)</label><input class="inp" id="gDue" type="date" value="${esc(x.due||"")}">
+    <p class="err" id="gErr"></p>
+    <div class="actions"><button class="btn" type="button" id="gSave">Speichern</button>${g?`<button class="btn ghost" type="button" id="gDel">Löschen</button>`:""}<button class="btn ghost" type="button" data-close>Abbrechen</button></div>`, g?null:"#gText");
+  pickChip($("#gSport"),"data-gs");
+  $("#gSave").onclick=()=>{
+    const text=$("#gText").value.trim(); if(!text){ $("#gErr").textContent="Beschreibe dein Ziel kurz."; return; }
+    const data={text,sport:$("#gSport").querySelector('[aria-pressed="true"]').dataset.gs,due:$("#gDue").value||""};
+    if(g) Object.assign(g,data); else state.goals.push({id:uid(),...data,done:false,ts:Date.now()});
+    persist(); closeSheet(); renderSettings(); toast("Ziel gespeichert.","Hak es ab, sobald du es erreicht hast.");
+  };
+  const del=$("#gDel"); if(del) del.onclick=()=>{ if(!confirm("Dieses Ziel löschen?")) return; state.goals=state.goals.filter(y=>y!==g); persist(); closeSheet(); renderSettings(); };
+}
+
+$("#settingsBtn").addEventListener("click", ()=>showTab(tab==="settings"?lastTab:"settings", true));
+document.addEventListener("click", e=>{
+  const t=e.target;
+  const sd=t.closest("[data-sday]");
+  if(sd){ state.profile[sd.dataset.sday]=sd.dataset.v; applyProfile(); persist(); render(); return; }
+  const ar=t.closest("[data-addrec]"); if(ar){ recordSheet(null, ar.dataset.addrec); return; }
+  const er=t.closest("[data-editrec]"); if(er){ const r=state.records.find(x=>x.id===er.dataset.editrec); if(r) recordSheet(r); return; }
+  const ag=t.closest("[data-addgoal]"); if(ag){ goalSheet(null); return; }
+  const eg=t.closest("[data-editgoal]"); if(eg){ const g=state.goals.find(x=>x.id===eg.dataset.editgoal); if(g) goalSheet(g); return; }
+  const gd=t.closest("[data-gdone]");
+  if(gd){ const g=state.goals.find(x=>x.id===gd.dataset.gdone); if(g){ g.done=!g.done; persist(); renderSettings(); if(g.done) toast("Ziel erreicht.","Stark. Setz dir das nächste."); } return; }
+});
+document.addEventListener("change", e=>{
+  const t=e.target; if(!t.closest || !t.closest("#settings")) return;
+  const err=m=>{ const el=$("#sErr"); if(el) el.textContent=m; };
+  if(t.id==="sRace"){
+    if(!validKey(t.value)){ err("Bitte ein gültiges Datum wählen."); return; }
+    const d=fromKey(t.value), ns=addDays(addDays(d,-((d.getDay()+6)%7)),-26*7);
+    if(Object.keys(state.logs).length && ns.getTime()!==START.getTime() && !confirm("Du hast schon Einträge. Sie bleiben ihren Wochen zugeordnet (Woche 1, 2, …), nur die Kalendertage der Wochen verschieben sich. Fortfahren?")){ renderSettings(); return; }
+    state.profile.raceDate=t.value; applyProfile(); persist(); render(); toast("Gespeichert.","Dein Plan ist neu ausgerichtet.");
+  } else if(t.id==="sGoal"){
+    const sec=parseGoal(t.value);
+    if(!sec){ err("Trag eine Zielzeit zwischen 0:50:00 und 4:00:00 ein, z. B. 1:55:00."); return; }
+    state.profile.goalSec=sec; applyProfile(); persist(); render(); toast("Zielzeit gespeichert.",`Das sind ${fmtPace(goalPace())} pro Kilometer.`);
+  } else if(t.id==="sProb"){
+    state.profile.problem=t.value.trim().slice(0,20); persist(); render();
+  }
+});
+
 // Neuer Tag, wenn die App lange offen bleibt
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && dayKey(todayNow())!==dayKey(today)) render(); });
 
+applyProfile();
 render();
 showTab(tab, false);
 })();

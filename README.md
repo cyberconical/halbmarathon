@@ -11,6 +11,13 @@ Eine schlanke, schwarz-weiße Android-App für das Training zum Halbmarathon am 
 - Alternativen eintragen, wenn etwas anderes stattfand, zum Beispiel Sauna oder Ruhetag
 - Fortschrittsbalken vom längsten Lauf bis zu 21,1 km
 
+**Einstellungen** (Symbol oben rechts)
+- Wettkampftag und Zielzeit: Der 27-Wochen-Plan richtet sich danach aus, die Zielpace wird berechnet
+- Eine Stelle, die du beobachtest (zum Beispiel Knie oder Achillessehne), oder keine
+- Zusatzeinheiten am Montag, Dienstag und Freitag frei wählbar: Kraft, Bouldern, Calisthenics, Stretching, Yoga, Schwimmen, Rad oder frei
+- Rekorde je Sportart (Laufen, Bouldern, Stretching, Calisthenics) mit Datum, dazu frühere Rekorde. Ein neuer Rekord schiebt den alten automatisch zu „Früher“
+- Persönliche Ziele pro Sportart mit optionalem Datum zum Abhaken
+
 **Gewohnheiten**
 - Beliebig viele eigene Gewohnheiten
 - Pro Tag abhaken (✕ / ○) oder eine Zahl eintragen
@@ -55,13 +62,16 @@ Die Backup-Datei enthält alle Einträge. Sie sollte nicht über öffentliche Li
 
 ## Plan anpassen
 
-Der Plan steckt in `index.html`. Oben im Skript stehen die wichtigsten Stellen:
+Die wichtigsten Werte stellst du direkt in der App ein, unter Einstellungen (Symbol oben rechts):
 
-- `START` und `RACE`: Startdatum und Wettkampftag
-- `PLAN`: eine Zeile pro Woche mit Titel, Mittwochs-Lauf und Sonntags-Lauf
-- `PHASES`: Beschreibung der Trainingsphasen
+- Wettkampftag und Zielzeit
+- Beobachtete Stelle (zum Beispiel Knie) oder keine
+- Zusatzeinheiten am Montag, Dienstag und Freitag
+- Rekorde, frühere Rekorde und Ziele
 
-Mit KI geht das ohne Code-Kenntnisse, siehe [Herunterladen und mit KI anpassen](#herunterladen-und-mit-ki-anpassen). Nach einer Änderung ein neues Release veröffentlichen.
+Die Struktur des Plans selbst steckt in `index.html`: `PLAN` enthält pro Woche einen Titel sowie den Mittwochs- und den Sonntagslauf, `PHASES` beschreibt die Trainingsphasen. Mit KI geht das ohne Code-Kenntnisse, siehe [Herunterladen und mit KI anpassen](#herunterladen-und-mit-ki-anpassen). Nach einer Änderung ein neues Release veröffentlichen.
+
+Neue Installationen starten mit sinnvollen Standardwerten: nur Krafttraining am Montag, keine beobachtete Stelle und ein Wettkampftag 27 Wochen nach dem nächsten Montag.
 
 ## Herunterladen und mit KI anpassen
 
@@ -89,7 +99,7 @@ Regeln:
 - Gib die vollständige, geänderte index.html zurück, nicht nur Ausschnitte.
 - Gespeicherte Daten müssen kompatibel bleiben. Der Speicherschlüssel
   "hm2027-state" und die vorhandenen Felder (logs, strength, alt, habits,
-  habitLog, learnings, updatedAt) dürfen nicht umbenannt oder entfernt
+  habitLog, learnings, profile, records, goals, updatedAt) dürfen nicht umbenannt oder entfernt
   werden. Neue Felder sind optional und brauchen Standardwerte.
 - Die Skript-IDs "saved-data" und "app" und die Backup-Funktion bleiben
   erhalten. Das Skript "saved-data" bleibt im Original leer (null).
@@ -107,9 +117,9 @@ Beispiele für Wünsche: eine weitere Auswahl beim Lauf (zum Beispiel Wetter), e
 | Bereich in `index.html` | Inhalt |
 |---|---|
 | `<style>` | Design, Farben als CSS-Variablen ganz oben |
-| HTML | Kopfleiste und drei Tabs: Training, Gewohnheiten, Statistik |
-| Skript `app`, oben | Plan (`PLAN`, `PHASES`), Datumskonstanten (`START`, `RACE`) |
-| Skript `app`, Mitte | Zustand (`state`), Speichern, Anzeige-Funktionen (`renderHero`, `renderWeek`, `renderPlan`, `renderHabits`, `renderStats`, `renderLearnings`) |
+| HTML | Kopfleiste, drei Tabs (Training, Gewohnheiten, Statistik) und die Einstellungen |
+| Skript `app`, oben | Plan (`PLAN`, `PHASES`), Profil-Auswertung (`applyProfile`, daraus entstehen `START`, `RACE`, `SESSIONS`) |
+| Skript `app`, Mitte | Zustand (`state`), Speichern, Anzeige-Funktionen (`renderHero`, `renderWeek`, `renderPlan`, `renderHabits`, `renderStats`, `renderLearnings`, `renderSettings`) |
 | Skript `app`, unten | Klick-Ereignisse, Backup speichern und laden |
 
 Alle Einträge stecken in einem Datensatz:
@@ -122,6 +132,10 @@ state = {
   habits:     [ { id, name, type: "check" | "number", unit, created } ],
   habitLog:   { <habitId>: { "2026-10-04": "x" | "o" | 7.5 } },
   learnings:  [ { id, date, ts, text, type: "insight" | "issue", tag, solved } ],
+  profile:    { raceDate: "2027-04-04", goalSec: 7200, problem: "Knie",
+                mon: "Kraft", tue: "Bouldern", fri: "Bouldern" },   // "Aus" = frei
+  records:    [ { id, sport: "lauf"|"boulder"|"stretch"|"cali", key, name, value, date, former, ts } ],
+  goals:      [ { id, sport: "allg"|"lauf"|..., text, due, done, ts } ],
   updatedAt:  <Zeitstempel>
 }
 ```
