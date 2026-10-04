@@ -165,6 +165,12 @@ table.ht{ border-collapse:separate; border-spacing:0; }
 .chart p{ margin:4px 0 12px; font-size:14px; color:var(--mute); }
 .chart svg{ width:100%; height:auto; display:block; }
 .empty{ padding:28px 16px; color:var(--mute); border:1px dashed var(--line); text-align:center; font-size:15px; }
+.cmp{ width:100%; border-collapse:collapse; font-size:15px; }
+.cmp th{ text-align:right; font-weight:500; font-size:13px; color:var(--mute); padding:6px 0; border-bottom:2px solid var(--fg); }
+.cmp th:first-child, .cmp td:first-child{ text-align:left; }
+.cmp td{ text-align:right; padding:10px 0; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.cmp td:first-child{ font-weight:700; }
+.cmp tr.sep td{ padding:0; border-bottom:2px solid var(--fg); }
 .kstrip{ display:flex; flex-wrap:wrap; gap:6px; }
 .kstrip span{ width:28px; height:28px; display:grid; place-items:center; border:1px solid var(--fg); font-size:14px; font-weight:800; }
 .kstrip .gut{ background:var(--fg); color:var(--bg); }
@@ -297,6 +303,11 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
         <p>Ein Feld pro Lauf. Voll: alles gut. Halb: zieht leicht. ✕: Schmerzen.</p>
         <div id="kneeStrip"></div>
       </div>
+      <div class="chart">
+        <h3>Schuhe &amp; Tageszeit</h3>
+        <p>Dein Vergleich nach Schuhtyp und Tageszeit.</p>
+        <div id="compare"></div>
+      </div>
     </section>
 
     <section>
@@ -392,6 +403,9 @@ const PLAN = [
 ];
 const LINES = ["Jeder Lauf zählt. Auch der langsame.","Das war Training für dein Knie und deinen Kopf.","Konstanz schlägt Talent. Du bist konstant.","Wieder ein Baustein für den 4. April.","Der Körper erinnert sich. Er kommt zurück.","Stark. Genau so baust du auf.","Eingetragen. Der nächste Lauf wartet schon."];
 const ALTS = ["Sauna","Ruhetag","Schwimmen","Rad","Yoga","Krank"];
+const SHOES = [["barfuss","Barfußschuhe"],["normal","Normale Schuhe"]];
+const TODS = [["morgen","Morgens"],["mittag","Mittags"],["abend","Abends"],["nacht","Nachts"]];
+const labelOf = (list,v) => { const x=list.find(e=>e[0]===v); return x?x[1]:""; };
 const TAGS = ["Knie","Tempo","Ausrüstung","Ernährung","Erholung","Kopf","Sonstiges"];
 
 const SESSIONS = [];
@@ -476,6 +490,7 @@ const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const isDone = s => s.kind==="run" ? !!state.logs[s.id] : !!state.strength[s.id];
 const currentWeek = () => Math.min(27,Math.max(1,Math.floor((today-START)/DAY/7)+1));
 const loggedRuns = () => RUNS.filter(r=>state.logs[r.id]).map(r=>({...r,log:state.logs[r.id]})).sort((a,b)=>a.date-b.date);
+const lastShoe = () => { const r=loggedRuns().filter(x=>x.log.shoe).pop(); return r?r.log.shoe:null; };
 const longest = () => loggedRuns().reduce((m,r)=>Math.max(m,r.log.km),0);
 function segValue(el){ const b=el.querySelector('[aria-pressed="true"]'); return b?b.dataset.v:null; }
 function segSet(el,v){ el.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v))); }
@@ -525,7 +540,8 @@ function sessHTML(s, open){
   let right="";
   if(alt) right=`<span class="result">${esc(alt.what)}<br><span class="sess-sub">statt Plan</span></span>`;
   if(log) right=`<span class="result">${fmtKm(log.km)} km<br><span class="sess-sub">${fmtPace(log.sec/log.km)} /km</span></span>`;
-  const sub = s.kind==="run" ? (s.race?"21,1 km":s.min+" Min.") : s.kind==="boulder" ? "Ideal, aber optional" : "Urban Sports";
+  let sub = s.kind==="run" ? (s.race?"21,1 km":s.min+" Min.") : s.kind==="boulder" ? "Ideal, aber optional" : "Urban Sports";
+  if(log){ const ex=[labelOf(SHOES,log.shoe),labelOf(TODS,log.tod)].filter(Boolean); if(ex.length) sub+=" · "+ex.join(" · "); }
   let body=`<p>${esc(s.d)}</p>`;
   if(s.kind==="run"){
     const l=log||{};
@@ -536,6 +552,10 @@ function sessHTML(s, open){
         <div class="seg" data-seg="feel">${["Zäh","Okay","Gut","Stark","Top"].map((t,i)=>`<button type="button" aria-pressed="${l.feel===i+1}" data-v="${i+1}">${t}</button>`).join("")}</div></div>
       <div class="full"><label>Knie</label>
         <div class="seg" data-seg="knee">${[["gut","Alles gut"],["zieht","Zieht leicht"],["schmerzt","Schmerzt"]].map(([v,t])=>`<button type="button" aria-pressed="${l.knee===v}" data-v="${v}">${t}</button>`).join("")}</div></div>
+      <div class="full"><label>Schuhe</label>
+        <div class="seg" data-seg="shoe">${SHOES.map(([v,t])=>`<button type="button" aria-pressed="${(l.shoe||(!log?lastShoe():null))===v}" data-v="${v}">${t}</button>`).join("")}</div></div>
+      <div class="full"><label>Tageszeit</label>
+        <div class="seg" data-seg="tod">${TODS.map(([v,t])=>`<button type="button" aria-pressed="${l.tod===v}" data-v="${v}">${t}</button>`).join("")}</div></div>
       <div class="full actions"><button class="btn" type="button" data-save="${s.id}">Lauf speichern</button>${log?`<button class="btn ghost" type="button" data-del="${s.id}">Eintrag löschen</button>`:""}</div>
       <p class="err full"></p>
     </div>`;
@@ -749,6 +769,19 @@ function renderStats(){
     ? `<div class="kstrip">${runs.map(r=>{ const k=r.log.knee||"na"; return `<span class="${k}" title="${fmtDate(r.date)}: ${k==="na"?"keine Angabe":k}">${k==="schmerzt"?"✕":k==="na"?"?":""}</span>`; }).join("")}</div>`
     : `<div class="empty">Sobald du Läufe einträgst, siehst du hier, wie es deinem Knie geht.</div>`;
 
+  const groups=[...SHOES.map(([v,t])=>[t,runs.filter(r=>r.log.shoe===v)]),null,...TODS.map(([v,t])=>[t,runs.filter(r=>r.log.tod===v)])];
+  const any=groups.some(g=>g&&g[1].length);
+  const rowsC=groups.map(g=>{
+    if(!g) return `<tr class="sep"><td colspan="4"></td></tr>`;
+    const [name,list]=g; if(!list.length) return "";
+    const k=list.reduce((a,r)=>a+r.log.km,0), sc=list.reduce((a,r)=>a+r.log.sec,0);
+    const kn=list.filter(r=>r.log.knee), ok=kn.filter(r=>r.log.knee==="gut").length;
+    return `<tr><td>${name}</td><td>${list.length}</td><td>${fmtPace(sc/k)}</td><td>${kn.length?Math.round(ok/kn.length*100)+" %":"–"}</td></tr>`;
+  }).join("");
+  $("#compare").innerHTML = any
+    ? `<table class="cmp"><thead><tr><th scope="col">Gruppe</th><th scope="col">Läufe</th><th scope="col">Ø Pace</th><th scope="col">Knie ok</th></tr></thead><tbody>${rowsC}</tbody></table><p class="hint">Mit wenigen Läufen sagt das noch nichts. Die Pace hängt auch von der Einheit ab, ein Intervalltraining ist schneller als ein lockerer Lauf.</p>`
+    : `<div class="empty">Wähle beim Eintragen eines Laufs Schuhe und Tageszeit, dann siehst du hier den Vergleich.</div>`;
+
   renderLearnings();
 }
 
@@ -854,7 +887,7 @@ document.addEventListener("click", e=>{
     const err=form.querySelector(".err");
     if(!km){ err.textContent="Trag die Kilometer als Zahl ein, z. B. 5,2."; return; }
     if(!sec){ err.textContent="Trag die Zeit als mm:ss ein, z. B. 31:40, oder als h:mm:ss."; return; }
-    const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:segValue(form.querySelector('[data-seg="knee"]')),ts:Date.now()};
+    const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:segValue(form.querySelector('[data-seg="knee"]')),shoe:segValue(form.querySelector('[data-seg="shoe"]')),tod:segValue(form.querySelector('[data-seg="tod"]')),ts:Date.now()};
     const msg=praise(id, entry);
     state.logs[id]=entry; delete state.alt[id]; persist(); openIds.delete(id); render(); toast(...msg); return;
   }
