@@ -9,8 +9,8 @@ Every change follows the contract from the [[Low-code manifesto|Low-Code-Manifes
 1. Create a branch.
 2. Change and test locally (below).
 3. Open a pull request against `main`. Describe: problem, cause, change, how tested, what was deliberately not changed.
-4. Start the build manually on the branch (Actions, “Build APK”, “Run workflow”, choose the branch). It also checks the Android part.
-5. Test the APK from that run on a device if the Android part or GPS recording is affected.
+4. The build starts by itself for the pull request (check `build`) and also verifies the Android part. It must be green before merging.
+5. Test the APK from that run (artifact `halbmarathon-apk`) on a device if the Android part or GPS recording is affected.
 6. Merge and create a release, see [[Build and release|Build-and-Release]].
 
 ## Testing locally
