@@ -116,6 +116,35 @@ textarea.inp{ font-size:16px; font-weight:400; resize:vertical; min-height:84px;
 .row .btn{ padding:8px 14px; }
 .linkbtn{ margin-top:12px; background:none; border:0; padding:0; text-decoration:underline; cursor:pointer; font-size:14px; }
 
+
+/* GPS-Aufzeichnung */
+.runbar{ position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom,0px) + 52px); z-index:6; padding:12px 20px; border:0; border-top:2px solid var(--fg); background:var(--fg); color:var(--bg); font-weight:700; text-align:left; cursor:pointer; }
+.runui{ position:fixed; inset:0; z-index:40; background:var(--bg); color:var(--fg); overflow:auto; display:flex; flex-direction:column; padding:calc(env(safe-area-inset-top,0px) + 16px) 20px calc(env(safe-area-inset-bottom,0px) + 20px); max-width:720px; margin:0 auto; }
+.runui.work{ filter:invert(1); }
+.run-top{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+.run-tag{ font-size:14px; font-weight:700; border:2px solid var(--fg); padding:3px 10px; border-radius:999px; }
+.run-label{ font-size:clamp(34px,11vw,60px); font-weight:900; font-stretch:62%; line-height:1; }
+.run-sub{ min-height:1.5em; margin-top:6px; color:var(--mute); font-size:17px; }
+.run-time{ margin-top:14px; font-size:clamp(84px,30vw,170px); font-weight:900; font-stretch:62%; line-height:.95; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+.run-grid{ display:grid; grid-template-columns:1fr 1fr; margin-top:20px; border-top:2px solid var(--fg); column-gap:12px; }
+.run-grid > div{ padding:12px 0 6px; }
+.run-grid b{ display:block; font-size:clamp(40px,13vw,72px); font-weight:800; font-stretch:70%; line-height:1; font-variant-numeric:tabular-nums; }
+.run-grid span{ font-size:14px; color:var(--mute); }
+.run-btns{ margin-top:auto; padding-top:24px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.run-btns.one{ grid-template-columns:1fr; }
+.run-btns .wide{ grid-column:1/-1; }
+.btn.big{ padding:20px 18px; font-size:19px; }
+.trkbox{ margin:4px 0 18px; }
+.routebox{ margin:14px 0; } .routebox svg{ width:100%; height:auto; display:block; }
+.tbl{ width:100%; border-collapse:collapse; margin:10px 0; font-variant-numeric:tabular-nums; font-size:15px; }
+.tbl th{ text-align:right; font-weight:400; font-size:12px; color:var(--mute); padding:4px 4px; border-bottom:2px solid var(--fg); }
+.tbl td{ text-align:right; padding:7px 4px; border-bottom:1px solid var(--line); }
+.tbl th:first-child, .tbl td:first-child{ text-align:left; padding-left:0; }
+.tbl tr.w td{ font-weight:800; }
+.mini{ font-size:16px; margin:16px 0 6px; font-stretch:100%; }
+.splits{ display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:8px 6px; }
+.splits b{ display:block; font-size:18px; font-variant-numeric:tabular-nums; } .splits span{ font-size:12px; color:var(--mute); }
+
 /* Plan */
 .phase{ margin-top:30px; }
 .phase h3{ font-size:24px; }
@@ -336,6 +365,11 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
         <p>Minuten pro Kilometer. Höher heißt schneller.</p>
         <div id="chartPace"></div>
       </div>
+      <div class="chart" id="routeChart" hidden>
+        <h3>Deine Wege</h3>
+        <p>Alle gespeicherten Routen in deiner Gegend übereinander. Je öfter du eine Straße läufst, desto dunkler.</p>
+        <div id="routeMap" class="routebox"></div>
+      </div>
       <div class="chart" id="kneeChart">
         <h3 id="kneeH">Knie-Verlauf</h3>
         <p>Ein Feld pro Lauf. Voll: alles gut. Halb: zieht leicht. ✕: Schmerzen.</p>
@@ -383,8 +417,217 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
 
 <dialog class="sheet" id="sheet"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<button class="runbar" id="runBar" type="button" hidden></button>
+<div class="runui" id="runUI" hidden></div>
 
 <script id="saved-data" type="application/json">null</script>
+<script id="engine">
+/* ---------- Lauf-Auswertung (reine Rechenfunktionen, kein Zugriff auf Gerät oder Speicher) ---------- */
+(function(root){
+"use strict";
+const RAD=Math.PI/180, ER=6371000;
+const hav=(a,b)=>{ const dLa=(b[0]-a[0])*RAD, dLo=(b[1]-a[1])*RAD;
+  const s=Math.sin(dLa/2)**2+Math.cos(a[0]*RAD)*Math.cos(b[0]*RAD)*Math.sin(dLo/2)**2;
+  return 2*ER*Math.asin(Math.min(1,Math.sqrt(s))); };
+
+/* Einheit aus dem Plantext lesen: "3" = 3 Min., "1:30" = 1 Min. 30 Sek. */
+const mins=v=>{ const p=String(v).split(":").map(Number); return p.length>1 ? p[0]*60+p[1] : p[0]*60; };
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const word=s=>{ const w=String(s).replace(/^\s*(im|in|nach Lust)\s+/i,"").trim().split(/\s+/)[0]||""; return cap(w); };
+
+/* Beschreibung der Einheit -> Abschnitte. Leere Liste = freier Lauf ohne Struktur. */
+function parseSegments(desc, planMin){
+  const d=String(desc||""), segs=[];
+  const add=(k,sec,label)=>{ if(sec>0) segs.push({k,sec:Math.round(sec),label}); };
+  let m=d.match(/(\d+)\s*[×x]\s*\(\s*([\d:]+)\s*Min\.?\s*([^,)]*),\s*([\d:]+)\s*Min\.?\s*([^)]*)\)/);
+  if(m){
+    const n=+m[1], a=mins(m[2]), b=mins(m[4]);
+    const la=word(m[3].trim().split(/\s+/).pop()), lb=word(m[5].trim().split(/\s+/).pop());
+    for(let i=0;i<n && i<60;i++){ add("work",a,la||"Laufen"); add("rest",b,lb||"Gehen"); }
+    return fin(segs);
+  }
+  const t=d.replace(/\([^)]*\)/g,"");
+  const warm=t.match(/(\d+)(?:\s*Min\.?)?\s+ein(?:laufen)?\b/), cool=t.match(/(\d+)(?:\s*Min\.?)?\s+aus(?:laufen)?\b/);
+  let rep=t.match(/(\d+)\s*[×x]\s*([\d:]+)\s*Min\.?\s*([^,.]*?)\s+mit\s+([\d:]+)\s*Min\.?\s*([A-Za-zÄÖÜäöüß]+)/);
+  if(!rep){ const r2=t.match(/(\d+)\s*[×x]\s*([\d:]+)\s*Min\.?\s+(HM-Tempo|zügig|Tempo)\b/i);   // Pause nicht genannt: 2 Min. Traben angenommen
+    if(r2){ rep=[r2[0],r2[1],r2[2],r2[3],"2","Traben"]; } }
+  let rest=t; if(rep) rest=rest.replace(rep[0],"");
+  const block=!rep && rest.match(/([\d:]+)\s*Min\.?\s+(?:nach Lust\s+)?(zügig|Tempowechsel|HM-Tempo|Tempo)\b/i);
+  const last=!rep && !block && rest.match(/letzten\s+([\d:]+)\s*Min\.?\s*(?:im\s+)?([^,.]*)/i);
+  if(!rep && !block && !last) return fin([]);
+  if(warm) add("easy",mins(warm[1]),"Einlaufen");
+  if(rep){
+    const n=+rep[1], w=mins(rep[2]), r=mins(rep[4]), lw=(word(rep[3])||"Tempo").replace(/^Halbmarathon-Tempo$/,"HM-Tempo");
+    for(let i=0;i<n && i<60;i++){ add("work",w,lw); if(i<n-1) add("rest",r,word(rep[5])||"Traben"); }
+  } else if(block){
+    add("work",mins(block[1]),cap(block[2].replace(/^zügig$/i,"zügig")));
+  } else if(last){
+    const l=mins(last[1]);
+    if(planMin>0 && planMin*60>l) add("easy",planMin*60-l,"Locker");
+    add("work",l,word(last[2])||"Tempo");
+  }
+  if(cool) add("easy",mins(cool[1]),"Auslaufen");
+  return fin(segs);
+  function fin(s){ return s.length>=2 ? s : []; }
+}
+
+/* Signale: Zeitpunkt (Sekunden Laufzeit), Art, Text. Wird auch an den Dienst übergeben. */
+function cuesFor(segs){
+  const out=[]; let at=0;
+  const dur=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+  segs.forEach((s,i)=>{
+    if(i>0) out.push({at,v:s.k==="work"?"work":"rest",n:s.label+" · "+dur(s.sec)});
+    at+=s.sec;
+  });
+  if(segs.length) out.push({at,v:"end",n:"Geschafft. Locker austraben."});
+  return out;
+}
+function current(segs, act){
+  let at=0;
+  for(let i=0;i<segs.length;i++){
+    const e=at+segs[i].sec;
+    if(act<e) return {i,seg:segs[i],left:Math.ceil(e-act),next:segs[i+1]||null};
+    at=e;
+  }
+  return null;
+}
+
+/* Rohpunkte [Zeit ms, Breite, Länge, Genauigkeit m, Tempo m/s] -> bereinigte Punkte mit Laufzeit und Strecke */
+function analyze(fixes, startMs, pauses, nowMs){
+  const P=(pauses||[]).map(p=>({from:p.from,to:p.to==null?(nowMs||Infinity):p.to}));
+  const act=t=>{ let s=(t-startMs)/1000; for(const p of P){ if(t>p.from) s-=(Math.min(t,p.to)-p.from)/1000; } return s; };
+  const inPause=t=>P.some(p=>t>=p.from && t<p.to);
+  /* Strecke: bevorzugt aus der vom GPS-Chip gemessenen Geschwindigkeit (Doppler), die ist viel
+     genauer als der Abstand zweier verrauschter Positionen. Fehlt sie, zählt der Abstand der Punkte. */
+  const pts=[]; let anchor=null, last=null, lastT=-Infinity, dist=0, drops=0, wasPaused=false;
+  for(const f of fixes){
+    const t=f[0], lat=f[1], lon=f[2], acc=f[3], sp=f[4];
+    if(!(t>lastT) || t<startMs-3000) continue;
+    if(acc>35) continue;
+    lastT=t;
+    if(inPause(t)){ wasPaused=true; continue; }
+    if(wasPaused){ anchor=null; last=null; wasPaused=false; }
+    const a=Math.max(0,act(t));
+    if(!anchor){ anchor={t,lat,lon}; last={t,sp}; pts.push({a,d:dist,lat,lon,brk:true}); drops=0; continue; }
+    const step=hav([anchor.lat,anchor.lon],[lat,lon]), dt=(t-anchor.t)/1000;
+    if(dt>0 && step/dt>9 && drops<5){ drops++; continue; }      // Ausreißer (Sprung)
+    drops=0;
+    const hasSp=sp>=0 && last.sp>=0, gap=(t-last.t)/1000;
+    if(hasSp && gap<=5){
+      const v0=last.sp<0.5?0:last.sp, v1=sp<0.5?0:sp;
+      dist+=(v0+v1)/2*gap;
+      last={t,sp};
+      if(step>=3 || dt>=8){ anchor={t,lat,lon}; pts.push({a,d:dist,lat,lon,brk:false}); }
+    } else {
+      last={t,sp};
+      if(step<3 && dt<8) continue;                               // Stehen / Rauschen
+      dist+=step; anchor={t,lat,lon}; pts.push({a,d:dist,lat,lon,brk:false});
+    }
+  }
+  const total=Math.max(0, nowMs==null?(pts.length?pts[pts.length-1].a:0):act(nowMs));
+  return {pts, dist, active:total};
+}
+
+function distAt(pts, a){
+  if(!pts.length || a<=pts[0].a) return 0;
+  const L=pts[pts.length-1]; if(a>=L.a) return L.d;
+  let lo=0, hi=pts.length-1;
+  while(hi-lo>1){ const mid=(lo+hi)>>1; if(pts[mid].a<=a) lo=mid; else hi=mid; }
+  const p=pts[lo], q=pts[hi], span=q.a-p.a;
+  return span>0 ? p.d+(q.d-p.d)*(a-p.a)/span : q.d;
+}
+function intervals(pts, segs, active){
+  const out=[]; let at=0;
+  segs.forEach(s=>{
+    const e=at+s.sec, from=Math.min(at,active), to=Math.min(e,active);
+    const sec=Math.max(0,to-from), m=distAt(pts,to)-distAt(pts,from);
+    out.push({k:s.k,label:s.label,plan:s.sec,sec:Math.round(sec),m:Math.round(m)});
+    at=e;
+  });
+  if(active-at>15){ const m=distAt(pts,active)-distAt(pts,at); out.push({k:"easy",label:"Danach",plan:0,sec:Math.round(active-at),m:Math.round(m)}); }
+  return out;
+}
+function lapSegs(laps, active){
+  const segs=[]; let at=0;
+  laps.concat([active]).forEach((t,i)=>{ if(t-at>=5){ segs.push({k:"lap",sec:Math.round(t-at),label:"Runde "+(segs.length+1)}); at=t; } });
+  return segs;
+}
+function splits(pts, total){
+  const out=[]; if(!pts.length) return out;
+  const D=pts[pts.length-1].d; let prevA=0, k=1;
+  for(let i=1;i<pts.length && k*1000<=D;i++){
+    while(k*1000<=pts[i].d){
+      const p=pts[i-1], q=pts[i], f=(k*1000-p.d)/(q.d-p.d||1), a=p.a+(q.a-p.a)*f;
+      out.push({km:k,sec:Math.round(a-prevA)}); prevA=a; k++;
+    }
+  }
+  const rest=D-(k-1)*1000;
+  if(rest>=100 && total>prevA) out.push({km:Math.round(D/10)/100,sec:Math.round(total-prevA),part:true,m:Math.round(rest)});
+  return out;
+}
+function livePace(pts, active){
+  if(pts.length<2) return null;
+  const q=pts[pts.length-1]; if(active-q.a>20) return null;
+  let i=pts.length-1; while(i>0 && q.a-pts[i].a<20) i--;
+  const dm=q.d-pts[i].d, ds=q.a-pts[i].a;
+  return dm>=15 && ds>0 ? ds/dm*1000 : null;
+}
+
+/* Linienvereinfachung (Douglas-Peucker), Toleranz in Metern */
+function simplify(pts, tol){
+  if(pts.length<3) return pts.slice();
+  const lat0=pts[0][0]*RAD, X=p=>p[1]*RAD*Math.cos(lat0)*ER, Y=p=>p[0]*RAD*ER;
+  const keep=new Uint8Array(pts.length); keep[0]=keep[pts.length-1]=1;
+  const stack=[[0,pts.length-1]];
+  while(stack.length){
+    const [a,b]=stack.pop(); let max=0, idx=-1;
+    const ax=X(pts[a]), ay=Y(pts[a]), bx=X(pts[b]), by=Y(pts[b]), dx=bx-ax, dy=by-ay, L=dx*dx+dy*dy;
+    for(let i=a+1;i<b;i++){
+      const px=X(pts[i])-ax, py=Y(pts[i])-ay;
+      let u=L?(px*dx+py*dy)/L:0; u=Math.max(0,Math.min(1,u));
+      const e=Math.hypot(px-u*dx, py-u*dy);
+      if(e>max){ max=e; idx=i; }
+    }
+    if(max>tol && idx>0){ keep[idx]=1; stack.push([a,idx],[idx,b]); }
+  }
+  return pts.filter((_,i)=>keep[i]);
+}
+function encode(pts){
+  let out="", pl=0, pn=0;
+  const enc=v=>{ v=v<0?~(v<<1):(v<<1); let s=""; while(v>=0x20){ s+=String.fromCharCode((0x20|(v&0x1f))+63); v>>=5; } return s+String.fromCharCode(v+63); };
+  for(const p of pts){ const la=Math.round(p[0]*1e5), lo=Math.round(p[1]*1e5); out+=enc(la-pl)+enc(lo-pn); pl=la; pn=lo; }
+  return out;
+}
+function decode(s){
+  const out=[]; let i=0, la=0, lo=0;
+  const next=()=>{ let r=0, sh=0, b; do{ b=s.charCodeAt(i++)-63; r|=(b&0x1f)<<sh; sh+=5; }while(b>=0x20 && i<=s.length); return (r&1)?~(r>>1):(r>>1); };
+  while(i<s.length){ la+=next(); lo+=next(); out.push([la/1e5,lo/1e5]); }
+  return out;
+}
+
+/* Strecke für die Karte: Schutzbereich um den Start entfernen, vereinfachen, kodieren.
+   Der Bereich wird nur hier im Speicher gebildet und nirgends abgelegt. */
+function buildRoute(pts, zoneM, rand){
+  if(!pts.length) return {parts:[]};
+  let zone=null;
+  if(zoneM>0){
+    const r=zoneM*(0.85+0.3*(rand?rand():Math.random()));
+    zone={lat:pts[0].lat, lon:pts[0].lon, r};
+  }
+  const parts=[]; let cur=[];
+  const flush=()=>{ if(cur.length>1){ const s=simplify(cur,4); if(s.length>1) parts.push(encode(s)); } cur=[]; };
+  for(const p of pts){
+    if(p.brk) flush();
+    if(zone && hav([zone.lat,zone.lon],[p.lat,p.lon])<zone.r){ flush(); continue; }
+    cur.push([p.lat,p.lon]);
+  }
+  flush();
+  return {parts};
+}
+
+root.HMTrk={hav,parseSegments,cuesFor,current,analyze,distAt,intervals,lapSegs,splits,livePace,simplify,encode,decode,buildRoute};
+})(typeof window!=="undefined"?window:globalThis);
+</script>
 <script id="app">
 (function(){
 "use strict";
@@ -534,6 +777,7 @@ function normalize(x){
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
+    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false) },
     updatedAt: x.updatedAt||0
   };
 }
@@ -631,10 +875,12 @@ function sessHTML(s, open){
   if(log){ const ex=[labelOf(SHOES,log.shoe),labelOf(TODS,log.tod)].filter(Boolean); if(ex.length) sub+=" · "+ex.join(" · "); }
   let body=`<p>${esc(s.d)}</p><button class="linkbtn edit-link" type="button" data-editsess="${s.id}">Einheit anpassen</button>`;
   if(s.kind==="run"){
-    const l=log||{};
+    const l=log||{}, pd=(!log && pend && pend.id===s.id)?pend:null;
+    body+=trkHTML(log?log.trk:pd&&pd.trk);
     body+=`<div class="form" data-form="${s.id}">
-      <div><label for="km-${s.id}">Kilometer</label><input type="text" inputmode="decimal" id="km-${s.id}" placeholder="z. B. 5,2" value="${l.km?fmtKm(l.km):""}"></div>
-      <div><label for="t-${s.id}">Zeit</label><input type="text" inputmode="numeric" id="t-${s.id}" placeholder="mm:ss" value="${l.sec?fmtDur(l.sec):""}"></div>
+      ${log?"":`<div class="full"><button class="btn ghost" type="button" data-gps="${s.id}">${trk&&trk.id===s.id?"Aufzeichnung öffnen":"Mit GPS aufzeichnen"}</button>${pd?`<p class="hint">Aufzeichnung übernommen. Prüfe die Werte und speichere den Lauf.</p>`:""}</div>`}
+      <div><label for="km-${s.id}">Kilometer</label><input type="text" inputmode="decimal" id="km-${s.id}" placeholder="z. B. 5,2" value="${l.km?fmtKm(l.km):pd?fmtKm(pd.km):""}"></div>
+      <div><label for="t-${s.id}">Zeit</label><input type="text" inputmode="numeric" id="t-${s.id}" placeholder="mm:ss" value="${l.sec?fmtDur(l.sec):pd?fmtDur(pd.sec):""}"></div>
       <div class="full"><label>Wie hat es sich angefühlt?</label>
         <div class="seg" data-seg="feel">${["Zäh","Okay","Gut","Stark","Top"].map((t,i)=>`<button type="button" aria-pressed="${l.feel===i+1}" data-v="${i+1}">${t}</button>`).join("")}</div></div>
       ${prob()?`<div class="full"><label>${esc(prob())}</label>
@@ -853,6 +1099,15 @@ function renderStats(){
     [state.learnings.filter(l=>l.type==="issue"&&!l.solved).length,"Offene Probleme"]
   ].filter(Boolean).map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
 
+  // Karte aller Routen
+  (function(){
+    const rs=runs.filter(r=>r.log.trk&&r.log.trk.route);
+    const box=$("#routeChart"); if(!rs.length){ box.hidden=true; return; }
+    const lines=rs.map(r=>r.log.trk.route.map(HMTrk.decode));
+    const ref=lines[lines.length-1][0][0];
+    const near=lines.filter(ls=>HMTrk.hav(ref,ls[0][0])<40000);
+    box.hidden=false; $("#routeMap").innerHTML=routeSVG([].concat(...near),{w:5,op:near.length>1?0.45:1,maxH:800});
+  })();
   // km per week
   const perWeek=Array.from({length:27},()=>0);
   runs.forEach(r=>perWeek[r.week-1]+=r.log.km);
@@ -986,6 +1241,269 @@ function setAlt(id, what){
     : ["Eingetragen.", run?"Bewegung ist Bewegung. Den Lauf nicht nachholen.":"Bewegung ist Bewegung."]));
 }
 
+/* ---------- GPS-Aufzeichnung ---------- */
+// Die Messpunkte bleiben im Arbeitsspeicher. Auf dem Gerät gespeichert wird erst das Ergebnis:
+// Zeiten, Strecken und (wenn gewünscht) die Route ohne den Schutzbereich um den Start.
+const HMTrk = window.HMTrk;
+const TRK_KEY="hm2027-trk", PEND_KEY="hm2027-trk-pend";
+const lsGet = k => { try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } };
+const lsSet = (k,v) => { try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+const nativeTracker = () => {
+  const C=window.Capacitor; if(!C) return null;
+  try{ if(C.isNativePlatform && !C.isNativePlatform()) return null;
+       return (C.Plugins && C.Plugins.RunTracker) || (C.registerPlugin ? C.registerPlugin("RunTracker") : null); }catch(e){ return null; }
+};
+let trk=null, pend=lsGet(PEND_KEY), trkTimer=null, trkView="", trkLast=null;
+const runUI=$("#runUI"), runBar=$("#runBar");
+const mmss = s => { s=Math.max(0,Math.round(s)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+const hhmmss = s => { s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600); return (h?h+":":"")+String(Math.floor(s%3600/60)).padStart(h?2:1,"0")+":"+String(s%60).padStart(2,"0"); };
+const GPS_ERR = {
+  PERMISSION:"Ohne den genauen Standort kann die App nicht aufzeichnen. Erlaube ihn in den Android-Einstellungen unter Apps, Halbmarathon, Berechtigungen.",
+  GPS_OFF:"Der Standort ist ausgeschaltet. Schalte ihn in den Schnelleinstellungen ein und starte noch einmal.",
+  RUNNING:"Es läuft schon eine Aufzeichnung.",
+  NOGEO:"Dieses Gerät oder dieser Browser liefert keinen Standort.",
+  DENIED:"Der Standort wurde nicht erlaubt. Erlaube ihn in den Einstellungen des Browsers."
+};
+function trkSave(){ lsSet(TRK_KEY, trk?{id:trk.id,startedAt:trk.startedAt,pauses:trk.pauses,laps:trk.laps,native:trk.native}:null); }
+function newTrk(id, startedAt, native, extra){
+  const s=SESSIONS.find(x=>x.id===id);
+  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt), cue:-1, segs: s?HMTrk.parseSegments(s.d,s.min):[]}, extra||{});
+  trkSave();
+  clearInterval(trkTimer); trkTimer=setInterval(trkTick,1000);
+}
+
+async function trkBegin(id){
+  const s=SESSIONS.find(x=>x.id===id); if(!s || trk) return;
+  const P=nativeTracker(), segs=HMTrk.parseSegments(s.d,s.min), cues=HMTrk.cuesFor(segs);
+  const fail=code=>{ const m=$("#rMsg"); if(m) m.textContent=GPS_ERR[code]||"Die Aufzeichnung konnte nicht gestartet werden."; };
+  try{
+    if(P){
+      let ps=await P.checkPermissions();
+      if(ps.location!=="granted") ps=await P.requestPermissions({permissions:["location"]});
+      if(ps.location!=="granted"){ fail("PERMISSION"); return; }
+      if(ps.notifications && ps.notifications!=="granted"){ try{ await P.requestPermissions({permissions:["notifications"]}); }catch(e){} }
+      const r=await P.start({cues:JSON.stringify(cues), meta:id});
+      newTrk(id, r.startedAt||Date.now(), true);
+    } else {
+      if(!navigator.geolocation){ fail("NOGEO"); return; }
+      newTrk(id, Date.now(), false);
+      const me=trk;
+      me.watch=navigator.geolocation.watchPosition(pos=>{
+        const c=pos.coords;
+        me.fixes.push([pos.timestamp||Date.now(), c.latitude, c.longitude, c.accuracy==null?-1:c.accuracy, c.speed==null?-1:c.speed]);
+      }, err=>{ me.geoErr=err.code; }, {enableHighAccuracy:true, maximumAge:0, timeout:30000});
+      try{ if(navigator.wakeLock) navigator.wakeLock.request("screen").then(l=>{ me.lock=l; }).catch(()=>{}); }catch(e){}
+    }
+  }catch(e){ fail(e&&e.code); return; }
+  showRun("live"); trkTick();
+}
+
+async function trkTick(){
+  if(!trk || trk.busy) return;
+  const me=trk; me.busy=true;
+  try{
+    const P=me.native?nativeTracker():null;
+    if(P){
+      const r=await P.getFixes({from:me.next});
+      if(r.fixes && r.fixes.length) for(const f of r.fixes) me.fixes.push(f);
+      me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending;
+    }
+    me.an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, Date.now());
+    trkCues(me);
+  }catch(e){}
+  me.busy=false;
+  if(trk===me) updateRun();
+}
+// Ohne Hintergrunddienst (Browser) meldet die App den Wechsel selbst per Vibration.
+function trkCues(me){
+  if(me.native || me.paused || !me.segs.length) return;
+  const c=HMTrk.current(me.segs, me.an.active), i=c?c.i:me.segs.length;
+  if(me.cue>=0 && i!==me.cue){ try{ navigator.vibrate && navigator.vibrate(c&&c.seg.k==="work"?[250,120,250]:[600]); }catch(e){} }
+  me.cue=i;
+}
+async function trkPause(){
+  if(!trk || trk.paused) return;
+  trk.pauses.push({from:Date.now(),to:null}); trk.paused=true; trkSave();
+  const P=trk.native&&nativeTracker(); if(P){ try{ await P.pause(); }catch(e){} }
+  trkTick();
+}
+async function trkResume(){
+  if(!trk || !trk.paused) return;
+  const p=trk.pauses[trk.pauses.length-1]; if(p && p.to==null) p.to=Date.now();
+  trk.paused=false; trkSave();
+  const P=trk.native&&nativeTracker(); if(P){ try{ await P.resume(); }catch(e){} }
+  trkTick();
+}
+function trkLap(){ if(trk && !trk.paused){ trk.laps.push(Math.round(trk.an.active)); trkSave(); try{ navigator.vibrate&&navigator.vibrate(80); }catch(e){} updateRun(); } }
+
+async function trkEnd(){
+  if(!trk) return;
+  const me=trk, now=Date.now(); me.ending=true; clearInterval(trkTimer);
+  const p=me.pauses[me.pauses.length-1]; if(p && p.to==null) p.to=now;
+  const P=me.native&&nativeTracker();
+  if(P){
+    try{
+      const r=await P.stop();
+      for(let k=0;k<20;k++){ const g=await P.getFixes({from:me.next}); (g.fixes||[]).forEach(f=>me.fixes.push(f)); me.next=g.next; if(me.next>=(r.count||0)) break; }
+    }catch(e){}
+  } else {
+    if(me.watch!=null) navigator.geolocation.clearWatch(me.watch);
+    if(me.lock){ try{ me.lock.release(); }catch(e){} }
+  }
+  const an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, now);
+  const segs=me.segs.length?me.segs:(me.laps.length?HMTrk.lapSegs(me.laps,an.active):[]);
+  const km=Math.round(an.dist/10)/100, sec=Math.round(an.active);
+  const iv=segs.length?HMTrk.intervals(an.pts,segs,an.active):[];
+  const sp=HMTrk.splits(an.pts,an.active);
+  const route=state.gps.save?HMTrk.buildRoute(an.pts,state.gps.zone).parts:null;
+  const tail=sp.length&&sp[sp.length-1].part?[sp[sp.length-1].m,sp[sp.length-1].sec]:null;
+  trkLast={id:me.id, km, sec, valid: km>=0.05 && sec>=30,
+    trk:{iv:iv.map(x=>[x.k,x.label,x.sec,x.m]), sp:sp.filter(x=>!x.part).map(x=>x.sec), tail, route:route&&route.length?route:null}};
+  trk=null; trkSave(); runBar.hidden=true;
+  showRun("sum");
+}
+function trkDiscard(){ trkLast=null; closeRun(); }
+function trkAccept(){
+  if(!trkLast || !trkLast.valid) return trkDiscard();
+  pend={id:trkLast.id, km:trkLast.km, sec:trkLast.sec, trk:trkLast.trk}; lsSet(PEND_KEY,pend);
+  const id=pend.id; trkLast=null; closeRun(); openIds.add(id);
+  const s=SESSIONS.find(x=>x.id===id);
+  if(s){ if(tab!=="training") showTab("training",false); render(); const el=document.querySelector(`[data-toggle="${id}"]`); if(el) el.scrollIntoView({block:"center"}); }
+}
+
+/* Wieder anknüpfen, wenn die App im Hintergrund beendet wurde, der Dienst aber weiterläuft */
+async function trkRestore(){
+  const saved=lsGet(TRK_KEY), P=nativeTracker();
+  if(!saved || !P){ if(saved) lsSet(TRK_KEY,null); return; }
+  try{
+    const st=await P.getStatus();
+    if(!st.running){ lsSet(TRK_KEY,null); return; }
+    const id=saved.id||st.meta;
+    if(!SESSIONS.find(x=>x.id===id)){ try{ await P.stop(); }catch(e){} lsSet(TRK_KEY,null); return; }
+    newTrk(id, st.startedAt||saved.startedAt, true, {pauses:saved.pauses||[], laps:saved.laps||[], paused:!!st.paused});
+    updateRunBar(); trkTick();
+  }catch(e){ lsSet(TRK_KEY,null); }
+}
+
+/* ---------- Anzeige ---------- */
+function showRun(view){
+  trkView=view; runUI.hidden=false; runUI.classList.remove("work"); document.body.style.overflow="hidden";
+  runBar.hidden=true;
+  if(view==="ready"){
+    const s=SESSIONS.find(x=>x.id===runUI.dataset.id), segs=s?HMTrk.parseSegments(s.d,s.min):[];
+    const z=state.gps.zone;
+    runUI.innerHTML=`<div class="run-top"><span class="run-tag">Bereit</span><button class="linkbtn" type="button" data-rclose>Abbrechen</button></div>
+      <div class="run-label">${s?esc(s.t||s.label||"Lauf"):"Lauf"}</div>
+      <p class="note">${segs.length?`Die App erkennt ${segs.filter(x=>x.k==="work").length} Tempo-Abschnitte im Plan und meldet jeden Wechsel per Vibration. Der Bildschirm darf aus bleiben.`:"Freier Lauf. Mit „Runde“ setzt du eigene Marken."}</p>
+      <p class="hint">${z?`Schutzbereich: ${z>=1000?"1 km":z+" m"} um den Start. Dort wird nichts gespeichert, Strecke und Zeit zählen aber mit.`:"Schutzbereich ist aus."} ${state.gps.save?"":"Die Route wird nicht gespeichert."} Alles bleibt auf diesem Gerät.</p>
+      <p class="err" id="rMsg"></p>
+      <div class="run-btns one"><button class="btn big" type="button" data-rstart>Start</button></div>`;
+    return;
+  }
+  if(view==="live"){
+    runUI.innerHTML=`<div class="run-top"><span class="run-tag" id="rGps">GPS sucht …</span><button class="linkbtn" type="button" data-rclose>Schließen</button></div>
+      <div class="run-label" id="rLabel"></div><div class="run-sub" id="rSub"></div>
+      <div class="run-time" id="rTime">0:00</div>
+      <div class="run-grid"><div><b id="rDist">0,00</b><span>km</span></div><div><b id="rPace">–</b><span>min/km</span></div></div>
+      <p class="err" id="rMsg"></p>
+      <div class="run-btns"><button class="btn ghost big" type="button" data-rpause id="rPause">Pause</button><button class="btn ghost big" type="button" data-rlap>Runde</button><button class="btn big wide" type="button" data-rend>Beenden</button></div>`;
+    updateRun(); return;
+  }
+  if(view==="sum"){
+    const r=trkLast;
+    if(!r.valid){
+      runUI.innerHTML=`<div class="run-label">Zu kurz</div><p class="note">Es wurde keine verwertbare Strecke aufgezeichnet. Prüfe, ob der Standort an ist und du freien Himmel hast.</p><div class="run-btns one"><button class="btn big" type="button" data-rdiscard>Schließen</button></div>`;
+      return;
+    }
+    const z=state.gps.zone;
+    runUI.innerHTML=`<div class="run-top"><span class="run-tag">Fertig</span></div>
+      <div class="run-time">${hhmmss(r.sec)}</div>
+      <div class="run-grid"><div><b>${fmtKm(r.km)}</b><span>km</span></div><div><b>${fmtPace(r.sec/r.km)}</b><span>min/km</span></div></div>
+      ${trkHTML(r.trk)}
+      ${r.trk.route?`<p class="hint">So wird die Route gespeichert.${z?` Ein Bereich von rund ${z>=1000?"1 km":z+" m"} um den Start fehlt absichtlich.`:""}</p>`:`<p class="hint">${state.gps.save?"Es gibt keine Route zu speichern.":"Die Route wird nicht gespeichert."}</p>`}
+      <div class="run-btns"><button class="btn big wide" type="button" data-raccept>In den Lauf übernehmen</button><button class="btn ghost big wide" type="button" data-rdiscard>Verwerfen</button></div>`;
+  }
+}
+function closeRun(){ runUI.hidden=true; runUI.innerHTML=""; runUI.classList.remove("work"); document.body.style.overflow=""; trkView=""; updateRunBar(); }
+function updateRunBar(){
+  if(!trk || !runUI.hidden){ runBar.hidden=true; return; }
+  runBar.hidden=false;
+  runBar.textContent=`● Lauf ${trk.paused?"pausiert":"läuft"} · ${hhmmss(trk.an.active)} · ${fmtKm(Math.round(trk.an.dist/10)/100)} km · öffnen`;
+}
+function updateRun(){
+  if(!trk){ return; }
+  if(trkView!=="live"){ updateRunBar(); return; }
+  const an=trk.an, act=an.active, set=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
+  set("rTime", hhmmss(act));
+  set("rDist", (Math.round(an.dist/10)/100).toFixed(2).replace(".",","));
+  const lp=HMTrk.livePace(an.pts, act);
+  set("rPace", trk.paused||lp==null||lp>1800?"–":fmtPace(lp));
+  const c=trk.segs.length?HMTrk.current(trk.segs,act):null;
+  let label, sub="";
+  if(trk.segs.length){
+    if(c){ label=c.seg.label; sub=`noch ${mmss(c.left)}`+(c.next?` · danach ${c.next.label}`:" · danach Ende"); }
+    else { label="Plan geschafft"; sub="Locker austraben und dann beenden."; }
+  } else { label=trk.laps.length?`Runde ${trk.laps.length+1}`:"Freier Lauf"; sub=trk.laps.length?`Letzte Marke bei ${hhmmss(trk.laps[trk.laps.length-1])}`:""; }
+  if(trk.paused){ label="Pause"; sub="Die Zeit steht."; }
+  set("rLabel",label); set("rSub",sub);
+  const pb=document.getElementById("rPause"); if(pb) pb.textContent=trk.paused?"Weiter":"Pause";
+  runUI.classList.toggle("work", !trk.paused && !!c && c.seg.k==="work");
+  const lf=trk.fixes[trk.fixes.length-1], age=lf?(Date.now()-lf[0])/1000:null;
+  let gt="GPS sucht …";
+  if(lf){ gt = trk.paused?"Pausiert" : age>12?"Kein Signal" : lf[3]>25?`GPS ungenau (±${Math.round(lf[3])} m)`:"GPS ok"; }
+  if(trk.dead) gt="Dienst beendet";
+  set("rGps", gt);
+  const m=document.getElementById("rMsg"); if(m) m.textContent = trk.dead?"Das System hat die Aufzeichnung beendet. Beende den Lauf, um die bisherigen Daten zu sichern.":(trk.geoErr?"Der Standort wird nicht freigegeben.":"");
+}
+
+/* ---------- Karte & Tabellen ---------- */
+function routeSVG(lines, o){
+  o=o||{}; const all=[].concat(...lines); if(all.length<2) return "";
+  let la0=1e9,la1=-1e9,lo0=1e9,lo1=-1e9;
+  all.forEach(p=>{ if(p[0]<la0)la0=p[0]; if(p[0]>la1)la1=p[0]; if(p[1]<lo0)lo0=p[1]; if(p[1]>lo1)lo1=p[1]; });
+  const k=Math.cos((la0+la1)/2*Math.PI/180), minDeg=300/111320;                  // mindestens 300 m Kartenausschnitt
+  if(la1-la0<minDeg){ const m=(la0+la1)/2; la0=m-minDeg/2; la1=m+minDeg/2; }
+  if((lo1-lo0)*k<minDeg){ const m=(lo0+lo1)/2; lo0=m-minDeg/2/k; lo1=m+minDeg/2/k; }
+  const pad=40, W=1000, w=(lo1-lo0)*k, h=la1-la0, sc=Math.min((W-2*pad)/w, ((o.maxH||700)-2*pad)/h);
+  const Wd=Math.round(w*sc+2*pad), Hd=Math.round(h*sc+2*pad);
+  const X=lo=>(pad+(lo-lo0)*k*sc).toFixed(1), Y=la=>(pad+(la1-la)*sc).toFixed(1);
+  const d=lines.map(l=>l.length<2?"":"M"+l.map(p=>X(p[1])+" "+Y(p[0])).join("L")).join("");
+  const nice=[50,100,200,500,1000,2000,5000,10000,20000]; let bar=nice[0];
+  for(const n of nice){ if(n/111320*sc<=Wd*0.3) bar=n; }
+  const bw=bar/111320*sc, by=Hd-16, bx=pad;
+  return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Karte der gelaufenen Strecke">
+    <rect x="1" y="1" width="${Wd-2}" height="${Hd-2}" fill="none" stroke="var(--line)" stroke-width="2"/>
+    <path d="${d}" fill="none" stroke="var(--fg)" stroke-width="${o.w||7}" stroke-linejoin="round" stroke-linecap="round" opacity="${o.op||1}"/>
+    <path d="M${bx} ${by-8}V${by}H${(bx+bw).toFixed(1)}V${by-8}" fill="none" stroke="var(--fg)" stroke-width="3"/>
+    <text x="${bx+bw+10}" y="${by}" font-size="22" fill="var(--fg)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${bar>=1000?bar/1000+" km":bar+" m"}</text></svg>`;
+}
+function trkHTML(t){
+  if(!t) return "";
+  const pace=(s,m)=>m>=20?fmtPace(s/m*1000):"–";
+  let out="";
+  const lines=(t.route||[]).map(HMTrk.decode);
+  if(lines.length) out+=`<div class="routebox">${routeSVG(lines)}</div>`;
+  if(t.iv&&t.iv.length) out+=`<table class="tbl"><thead><tr><th>Abschnitt</th><th>Zeit</th><th>Meter</th><th>min/km</th></tr></thead><tbody>${t.iv.map(r=>`<tr class="${r[0]==="work"?"w":""}"><td>${esc(r[1])}</td><td>${mmss(r[2])}</td><td>${r[3]}</td><td>${pace(r[2],r[3])}</td></tr>`).join("")}</tbody></table>`;
+  if((t.sp&&t.sp.length)||t.tail) out+=`<h3 class="mini">Kilometer</h3><div class="splits">${(t.sp||[]).map((s,i)=>`<div><b>${fmtPace(s)}</b><span>km ${i+1}</span></div>`).join("")}${t.tail?`<div><b>${pace(t.tail[1],t.tail[0])}</b><span>+${t.tail[0]} m</span></div>`:""}</div>`;
+  return out?`<div class="trkbox">${out}</div>`:"";
+}
+
+document.addEventListener("click", e=>{
+  const t=e.target;
+  const g=t.closest("[data-gps]");
+  if(g){ if(trk){ if(trk.id===g.dataset.gps){ showRun("live"); } else toast("Es läuft schon eine Aufzeichnung.","Beende sie zuerst."); return; }
+    runUI.dataset.id=g.dataset.gps; showRun("ready"); return; }
+  if(t.closest("#runBar")){ showRun("live"); return; }
+  if(!runUI.contains(t)) return;
+  if(t.closest("[data-rstart]")) trkBegin(runUI.dataset.id);
+  else if(t.closest("[data-rpause]")) (trk&&trk.paused?trkResume():trkPause());
+  else if(t.closest("[data-rlap]")) trkLap();
+  else if(t.closest("[data-rend]")){ if(trk && trk.an.active<20 || confirm("Lauf beenden?")) trkEnd(); }
+  else if(t.closest("[data-rclose]")) closeRun();
+  else if(t.closest("[data-raccept]")) trkAccept();
+  else if(t.closest("[data-rdiscard]")) trkDiscard();
+});
+
 /* ---------- Events ---------- */
 document.addEventListener("click", e=>{
   const t=e.target;
@@ -1020,6 +1538,7 @@ document.addEventListener("click", e=>{
     if(!km){ err.textContent="Trag die Kilometer als Zahl ein, z. B. 5,2."; return; }
     if(!sec){ err.textContent="Trag die Zeit als mm:ss ein, z. B. 31:40, oder als h:mm:ss."; return; }
     const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:(()=>{const k=form.querySelector('[data-seg="knee"]');return k?segValue(k):null;})(),shoe:segValue(form.querySelector('[data-seg="shoe"]')),tod:segValue(form.querySelector('[data-seg="tod"]')),ts:Date.now()};
+    if(pend && pend.id===id){ if(pend.trk) entry.trk=pend.trk; pend=null; lsSet(PEND_KEY,null); }
     const msg=praise(id, entry);
     const prevL=loggedRuns().filter(r=>r.id!==id).reduce((m,r)=>Math.max(m,r.log.km),0), rm=recLongest();
     state.logs[id]=entry; delete state.alt[id];
@@ -1124,7 +1643,7 @@ $("#importFile").addEventListener("change", async e=>{
 });
 $("#reset").addEventListener("click", ()=>{
   if(confirm("Wirklich alle Läufe, Gewohnheiten und Learnings löschen? Das lässt sich nicht rückgängig machen.")){
-    state=normalize(null); persist(); render();
+    state=normalize(null); pend=null; lsSet(PEND_KEY,null); persist(); render();
   }
 });
 /* ---------- Wochenübersicht je Sportart ---------- */
@@ -1448,6 +1967,17 @@ function renderSettings(){
       </div>
     </section>
     <section>
+      <div class="sec-head"><h2>GPS &amp; Route</h2><small>nur auf diesem Gerät</small></div>
+      <div class="form" style="margin-top:16px">
+        <div class="full"><label>Schutzbereich um den Start</label>
+          <div class="chips">${[[0,"Aus"],[150,"150 m"],[300,"300 m"],[500,"500 m"],[1000,"1 km"]].map(([v,n])=>`<button type="button" class="chip" aria-pressed="${state.gps.zone===v}" data-gzone="${v}">${n}</button>`).join("")}</div>
+          <p class="hint">Was innerhalb dieses Bereichs um deinen Startpunkt liegt, wird nicht gespeichert. Strecke und Zeit zählen trotzdem vollständig. Den Startpunkt merkt sich die App nur während des Laufs.</p></div>
+        <div class="full"><label>Route speichern</label>
+          <div class="chips">${[[true,"Ja"],[false,"Nein"]].map(([v,n])=>`<button type="button" class="chip" aria-pressed="${state.gps.save===v}" data-gsave="${v}">${n}</button>`).join("")}</div>
+          <p class="hint">Die Route gehört zum Lauf, liegt nur auf deinem Gerät und steht in deinem Backup. Bei „Nein“ bleiben Zeiten, Strecken und Intervalle erhalten, aber keine Karte.</p></div>
+      </div>
+    </section>
+    <section>
       <div class="sec-head"><h2>Rekorde</h2><small>je Sportart</small></div>
       <p class="hint">Aktuelle Rekorde stehen oben, frühere darunter. Trägst du für dieselbe Disziplin einen neuen Rekord ein, rutscht der alte automatisch zu „Früher“.</p>
       ${SPORTS.map(([k,name])=>{
@@ -1529,6 +2059,10 @@ function goalSheet(g){
 $("#settingsBtn").addEventListener("click", ()=>showTab(tab==="settings"?lastTab:"settings", true));
 document.addEventListener("click", e=>{
   const t=e.target;
+  const gz=t.closest("[data-gzone]");
+  if(gz){ state.gps.zone=+gz.dataset.gzone; persist(); renderSettings(); return; }
+  const gs=t.closest("[data-gsave]");
+  if(gs){ state.gps.save=gs.dataset.gsave==="true"; persist(); renderSettings(); return; }
   const sd=t.closest("[data-sday]");
   if(sd){ state.profile[sd.dataset.sday]=sd.dataset.v; applyProfile(); persist(); render(); return; }
   const ar=t.closest("[data-addrec]"); if(ar){ recordSheet(null, ar.dataset.addrec); return; }
@@ -1561,6 +2095,7 @@ document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && dayKe
 applyProfile();
 render();
 showTab(tab, false);
+trkRestore();
 })();
 </script>
 </body>

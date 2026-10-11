@@ -9,6 +9,8 @@ Eine schlanke Android-App, die dich in 27 Wochen zum Halbmarathon begleitet: Tra
 - Läufe mit Kilometern, Zeit, Gefühl, Schuhen und Tageszeit eintragen.
 - Zusatzeinheiten wie Kraft, Bouldern oder Yoga an drei frei wählbaren Wochentagen.
 - Mit einem Tipp festhalten, was du heute gemacht hast. Jede Einheit lässt sich anpassen, „Zurück zum Plan“ stellt den Vorschlag wieder her.
+- Optional per GPS aufzeichnen: Strecke, Zeit, Pace, jeder Intervall-Abschnitt des Plans und jeder Kilometer. Bei Intervallen vibriert das Handy zum Wechsel, der Bildschirm darf aus bleiben.
+- Die gelaufene Route erscheint als Karte im Lauf und, übereinandergelegt, in der Statistik. Die Karte ist eine gezeichnete Linie, es werden keine Kartenkacheln geladen.
 
 **Gewohnheiten**
 - Eigene Gewohnheiten anlegen, pro Tag abhaken oder eine Zahl eintragen.
@@ -23,6 +25,7 @@ Eine schlanke Android-App, die dich in 27 Wochen zum Halbmarathon begleitet: Tra
 - Wettkampftag und Zielzeit, daraus wird die Zielpace berechnet.
 - Eine Körperstelle, die du im Blick behalten willst, zum Beispiel das Knie.
 - Rekorde und persönliche Ziele je Sportart.
+- GPS und Route: Schutzbereich um den Start und ob die Route gespeichert wird.
 
 Die App ist auf Deutsch. Das Design ist schwarz-weiß und folgt dem hellen oder dunklen Modus des Geräts.
 
@@ -48,6 +51,8 @@ Voraussetzung: Android 5.1 oder neuer.
 
 - Alle Einträge liegen im privaten Speicher der App. Es gibt keinen Server und kein Konto.
 - Die App ruft keine Server auf. Sie nutzt keine Google-Dienste, keine Werbung und keine Tracker. Die Schrift liegt in der App.
+- Der Standort wird nur während einer Aufzeichnung genutzt und nie gesendet. Die App verwendet dafür das GPS des Geräts direkt, nicht die Google-Standortdienste. Die rohen Messpunkte bleiben im Arbeitsspeicher. Gespeichert wird erst das Ergebnis, auf Wunsch mit Route.
+- Ein einstellbarer **Schutzbereich** (Standard 300 m) um den Start wird nie gespeichert. Strecke und Zeit zählen aber vollständig. Er schützt vor dem Naheliegenden, ersetzt aber keine Vorsicht: Wer deine Route kennt, kann die Gegend erahnen.
 - Android sichert die App-Daten nicht automatisch in der Cloud. Deine Einträge verlassen das Gerät nur, wenn du selbst ein Backup teilst.
 - Beim Deinstallieren oder beim Löschen der App-Daten gehen die Einträge verloren. Updates über Obtainium behalten sie.
 
@@ -56,7 +61,7 @@ Voraussetzung: Android 5.1 oder neuer.
 - **Sichern:** Oben auf „Backup speichern“ tippen und im Teilen-Menü einen Ort wählen, zum Beispiel Drive oder Dateien.
 - **Wiederherstellen:** Ganz unten auf „Backup laden“ tippen und die Datei auswählen.
 
-Die Backup-Datei enthält alle deine Einträge. Teile sie nicht über öffentliche Links und lade sie nicht in ein öffentliches Repository hoch.
+Die Backup-Datei enthält alle deine Einträge und Routen, unverschlüsselt. Teile sie nicht über öffentliche Links und lade sie nicht in ein öffentliches Repository hoch.
 
 ## Entwicklung
 
@@ -74,6 +79,7 @@ Wie du die App anpasst, ein Release veröffentlichst und was das Datenmodell ent
 
 ```
 index.html                    die App
+plugins/run-tracker/          GPS-Aufzeichnung für Android (ohne Google-Dienste)
 fonts/                        Schrift Instrument Sans mit Lizenztext
 .github/workflows/build.yml   Build, Signierung und Upload ans Release
 docs/entwicklung.md           Anpassen, Datenmodell, Veröffentlichen

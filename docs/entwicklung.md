@@ -61,8 +61,10 @@ Beispiele für Wünsche: eine weitere Auswahl beim Lauf (zum Beispiel Wetter), e
 |---|---|
 | `<style>` | Design, Farben als CSS-Variablen ganz oben |
 | HTML | Kopfleiste, drei Tabs (Training, Gewohnheiten, Statistik) und die Einstellungen |
+| Skript `engine` | Rechenkern der Aufzeichnung (`HMTrk`): Abschnitte aus dem Plantext, Filter, Strecke, Intervalle, Splits, Schutzbereich, Linienvereinfachung und Kodierung. Reine Funktionen ohne Zugriff auf Gerät oder Speicher |
 | Skript `app`, oben | Plan (`PLAN`, `PHASES`), Profil-Auswertung (`applyProfile`, daraus entstehen `START`, `RACE`, `SESSIONS`) |
 | Skript `app`, Mitte | Zustand (`state`), Speichern, Anzeige-Funktionen (`renderHero`, `renderWeek`, `renderPlan`, `renderHabits`, `renderStats`, `renderOverview`, `renderLearnings`, `renderSettings`) |
+| Skript `app`, GPS-Teil | Ablauf der Aufzeichnung (`trkBegin`, `trkTick`, `trkEnd`), Laufansicht `#runUI`, Kartenzeichnung `routeSVG` |
 | Skript `app`, unten | Klick-Ereignisse, Backup speichern und laden |
 
 Alle Einträge stecken in einem Datensatz:
@@ -82,7 +84,15 @@ state = {
   workouts:   [ { id, sport: "boulder"|"kraft"|"cali"|"stretch"|"other", date, min, note, ts } ],
   dur:        { "w3-tue": 75 },   // optionale Dauer in Minuten für Plan-Einheiten
   edits:      { "w3-wed": { t, d, min, off, label, skip } },   // eigene Anpassungen am Plan, nur geänderte Felder
+  gps:        { zone: 0|150|300|500|1000, save: true|false },   // Schutzbereich in Metern, Route speichern
   updatedAt:  <Zeitstempel>
+}
+
+// Optionales Feld eines Laufs, wenn er per GPS aufgezeichnet wurde:
+logs["w3-wed"].trk = {
+  iv:    [ ["work"|"rest"|"easy"|"lap", "Zügig", sekunden, meter], ... ],   // Abschnitte
+  sp:    [ sekundenProKm, ... ], tail: [meter, sekunden] | null,            // Kilometer-Splits
+  route: [ "<kodierte Linie>", ... ] | null                                  // Polylinie (Genauigkeit 1e-5), ohne Schutzbereich
 }
 ```
 
@@ -124,7 +134,7 @@ Der Build lässt sich auch manuell über den Reiter „Actions“ starten. Die A
 | App | Eine Datei, `index.html`, mit HTML, CSS und JavaScript ohne Frameworks |
 | Schrift | Instrument Sans (SIL Open Font License 1.1), lokal in `fonts/`, keine Aufrufe an Google |
 | Speicher | `localStorage` im WebView, ein JSON-Datensatz |
-| Android-Hülle | [Capacitor](https://capacitorjs.com) 6, Plugins für Dateien und Teilen |
+| Android-Hülle | [Capacitor](https://capacitorjs.com) 6, Plugins für Dateien und Teilen, eigenes Plugin `run-tracker` für GPS |
 | Build | GitHub Actions (`.github/workflows/build.yml`), Node 20, Java 17 |
 | Datenschutz im Build | Der Build entfernt das Google-Services-Plugin und schaltet die automatische Cloud-Sicherung von Android (`allowBackup`) ab |
 | Versionsnummer | `versionCode` entspricht der laufenden Build-Nummer |
@@ -134,12 +144,25 @@ Der Build erzeugt das Android-Projekt bei jedem Lauf neu. Im Repository liegen d
 
 ```
 index.html                    die App
+plugins/run-tracker/          GPS-Plugin (Java), wird im Build eingebunden
 fonts/                        Schrift mit Lizenztext
 .github/workflows/build.yml   Bauanleitung, Signierung, Upload ans Release
 docs/entwicklung.md           diese Datei
 LICENSE                       GNU General Public License v3
 README.md                     Überblick für Nutzer
 ```
+
+## GPS-Aufzeichnung
+
+Ablauf: Die App startet den Vordergrunddienst, der das GPS des Geräts ausliest und die Punkte im Arbeitsspeicher sammelt. Die Oberfläche holt sie einmal pro Sekunde ab und rechnet daraus Zeit, Strecke und Abschnitt. Bei ausgeschaltetem Bildschirm sammelt der Dienst weiter, die Oberfläche holt nach.
+
+- **Keine Google-Dienste.** Das Plugin `plugins/run-tracker` nutzt nur den Android-`LocationManager` mit dem GPS-Anbieter. Die fertigen Capacitor-Plugins für Standort hängen an den Google Play Services und kommen deshalb nicht in Frage.
+- **Strecke** kommt aus der Doppler-Geschwindigkeit des GPS-Chips, fehlt sie, aus dem Abstand der Punkte. Punkte mit mehr als 35 m Ungenauigkeit und Sprünge über 9 m/s werden verworfen. Das Stehen an der Ampel zählt nicht als Strecke.
+- **Abschnitte** werden aus der Beschreibung der Einheit gelesen (zum Beispiel „5× 2 Min. zügig mit 1:30 Min. traben“). Passt der Text zu keinem Muster, gilt der Lauf als frei, dann sind Runden von Hand möglich. Ist bei Wiederholungen keine Pause genannt, rechnet die App mit 2 Minuten. Die Abschnitte sind zeitbasiert, Strecke je Abschnitt ist die Strecke in dieser Zeit. Sehr kurze Abschnitte (Steigerungen, 20 Sekunden) sind per GPS nicht verlässlich messbar und werden nicht ausgewertet.
+- **Schutzbereich:** Mittelpunkt ist der erste Messpunkt des Laufs, der Radius wird pro Lauf um 15 Prozent zufällig verändert. Alle Punkte darin fallen vor dem Speichern weg, auch am Ende des Laufs. Der Mittelpunkt wird nirgends abgelegt. Der Rand der Lücke verrät die Größenordnung, nicht den genauen Ort.
+- **Aufnahme und App-Neustart:** Beendet Android die Oberfläche im Hintergrund, läuft der Dienst weiter und die App knüpft beim Öffnen wieder an. Wird der ganze Prozess beendet, sind die Punkte weg. Das ist gewollt, es liegt nie etwas Unfertiges auf dem Datenträger.
+- **Berechtigungen:** genauer Standort, Vordergrunddienst (Typ Standort), Benachrichtigungen (Anzeige des Dienstes) und Vibration. Alle werden erst beim ersten Start einer Aufzeichnung abgefragt.
+- **Test:** Der Build läuft auch bei jedem Push auf den Branch `claude/gps-tracking`. Die APK steht dann im Reiter „Actions“ als Artefakt. Im Browser funktioniert die Aufzeichnung mit dem Standort des Browsers, aber nur bei geöffnetem Bildschirm.
 
 ## Signatur der APK
 
