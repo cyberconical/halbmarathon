@@ -1,13 +1,17 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Halbmarathon-Training</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
 <style>
+/* Schrift: Instrument Sans (SIL Open Font License 1.1), liegt lokal in fonts/. Es werden keine Server aufgerufen. */
+@font-face{
+  font-family:"Instrument Sans";
+  font-style:normal; font-weight:400 700; font-stretch:75% 100%; font-display:swap;
+  src:url("fonts/instrument-sans-latin-wdth-normal.woff2") format("woff2-variations"), url("fonts/instrument-sans-latin-wdth-normal.woff2") format("woff2");
+}
 :root{
   --bg:#ffffff; --fg:#000000; --mute:#6b6b6b; --line:#d9d9d9; --soft:#f2f2f2;
   box-sizing:border-box;
@@ -22,7 +26,7 @@ html{ scroll-padding-top:calc(env(safe-area-inset-top,0px) + 60px); }
 *,*::before,*::after{ box-sizing:border-box; }
 body{
   margin:0; background:var(--bg); color:var(--fg);
-  font-family:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  font-family:"Instrument Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
 }
@@ -622,7 +626,7 @@ function renderHero(){
   const X=k=>20+k/21.1*960, fill=Math.min(lg,21.1);
   let ticks="";
   for(let k=0;k<=21;k++){ const big=k%5===0; ticks+=`<line x1="${X(k)}" x2="${X(k)}" y1="${big?44:52}" y2="72" stroke="var(--fg)" stroke-width="${big?2:1}"/>`; }
-  const lab=(k,t,anchor="middle",y=100,w=400)=>`<text x="${X(k)}" y="${y}" text-anchor="${anchor}" font-size="22" font-weight="${w}" fill="var(--fg)" font-family="Archivo, sans-serif">${t}</text>`;
+  const lab=(k,t,anchor="middle",y=100,w=400)=>`<text x="${X(k)}" y="${y}" text-anchor="${anchor}" font-size="22" font-weight="${w}" fill="var(--fg)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${t}</text>`;
   $("#ruler").innerHTML=`<svg viewBox="0 0 1000 150" role="img" aria-label="Längster Lauf ${fmtKm(lg)} von 21,1 Kilometern">
     <rect x="20" y="58" width="960" height="14" fill="var(--soft)"/>
     <rect x="20" y="58" width="${Math.max(0,X(fill)-20)}" height="14" fill="var(--fg)"/>
@@ -632,7 +636,7 @@ function renderHero(){
     ${recM>0&&recM<21.1?`<line x1="${X(recM)}" x2="${X(recM)}" y1="30" y2="72" stroke="var(--fg)" stroke-width="2" stroke-dasharray="4 4"/>`:""}
     ${lab(0,"0")}${lab(5,"5")}${lab(10,"10")}${recM>0&&recM<21.1?lab(recM,"Rekord "+fmtKm(recM),recM>16?"end":"middle",24,600):""}${lab(21.1,"21,1","end",100,800)}
     ${lg>0?`<circle cx="${X(fill)}" cy="65" r="13" fill="var(--bg)" stroke="var(--fg)" stroke-width="4"/>
-    <text x="${Math.min(X(fill),X(17))}" y="138" text-anchor="middle" font-size="24" font-weight="800" fill="var(--fg)" font-family="Archivo, sans-serif">${fmtKm(lg)} km</text>`:""}
+    <text x="${Math.min(X(fill),X(17))}" y="138" text-anchor="middle" font-size="24" font-weight="800" fill="var(--fg)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${fmtKm(lg)} km</text>`:""}
   </svg><div class="cap"><span>Längster Lauf im Plan</span><span>Ziel ${fmtDate(RACE)}</span></div>`;
 
   $("#stats").innerHTML=`
@@ -884,8 +888,8 @@ function renderStats(){
     const h=k/max*(H-50), x=pad+i*bw+2, y=H-26-h;
     if(i+1===cw) bars+=`<rect x="${x-1}" y="12" width="${bw-2}" height="${H-38}" fill="none" stroke="var(--fg)" stroke-dasharray="3 3"/>`;
     bars+=`<rect x="${x+1}" y="${y}" width="${bw-6}" height="${Math.max(h,k?2:0)}" fill="var(--fg)"/>`;
-    if(k) bars+=`<text x="${x+bw/2-2}" y="${y-5}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--fg)" font-family="Archivo, sans-serif">${Math.round(k)}</text>`;
-    if(i===0||(i+1)%5===0) bars+=`<text x="${x+bw/2-2}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--mute)" font-family="Archivo, sans-serif">W${i+1}</text>`;
+    if(k) bars+=`<text x="${x+bw/2-2}" y="${y-5}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--fg)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${Math.round(k)}</text>`;
+    if(i===0||(i+1)%5===0) bars+=`<text x="${x+bw/2-2}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--mute)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">W${i+1}</text>`;
   });
   bars+=`<line x1="${pad}" x2="${W}" y1="${H-26}" y2="${H-26}" stroke="var(--fg)" stroke-width="1.5"/>`;
   $("#chartKm").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kilometer pro Woche">${bars}</svg>`;
@@ -898,12 +902,12 @@ function renderStats(){
     const PW=540,PH=220,L=44,Rr=12,T=16,B=30;
     const x=i=>L+i/(runs.length-1)*(PW-L-Rr), y=p=>T+(p-lo)/(hi-lo)*(PH-T-B);
     let g="";
-    for(let p=Math.ceil(lo/30)*30;p<=hi;p+=30) g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(p)}" y2="${y(p)}" stroke="var(--line)"/><text x="${L-8}" y="${y(p)+4}" text-anchor="end" font-size="11" fill="var(--mute)" font-family="Archivo, sans-serif">${fmtPace(p)}</text>`;
-    g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(gp)}" y2="${y(gp)}" stroke="var(--fg)" stroke-dasharray="6 4"/><text x="${PW-Rr}" y="${y(gp)-6}" text-anchor="end" font-size="11" font-weight="700" fill="var(--fg)" font-family="Archivo, sans-serif">Ziel ${fmtDur(goalSec())} (${fmtPace(gp)}/km)</text>`;
+    for(let p=Math.ceil(lo/30)*30;p<=hi;p+=30) g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(p)}" y2="${y(p)}" stroke="var(--line)"/><text x="${L-8}" y="${y(p)+4}" text-anchor="end" font-size="11" fill="var(--mute)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${fmtPace(p)}</text>`;
+    g+=`<line x1="${L}" x2="${PW-Rr}" y1="${y(gp)}" y2="${y(gp)}" stroke="var(--fg)" stroke-dasharray="6 4"/><text x="${PW-Rr}" y="${y(gp)-6}" text-anchor="end" font-size="11" font-weight="700" fill="var(--fg)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">Ziel ${fmtDur(goalSec())} (${fmtPace(gp)}/km)</text>`;
     g+=`<polyline points="${paces.map((p,i)=>`${x(i)},${y(p)}`).join(" ")}" fill="none" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>`;
     const best=Math.min(...paces);
     paces.forEach((p,i)=>{ g+=`<circle cx="${x(i)}" cy="${y(p)}" r="${p===best?6:4}" fill="${p===best?"var(--fg)":"var(--bg)"}" stroke="var(--fg)" stroke-width="2"><title>${fmtDate(runs[i].date)}: ${fmtPace(p)} /km, ${fmtKm(runs[i].log.km)} km</title></circle>`; });
-    g+=`<text x="${L}" y="${PH-8}" font-size="11" fill="var(--mute)" font-family="Archivo, sans-serif">${fmtDate(runs[0].date)}</text><text x="${PW-Rr}" y="${PH-8}" text-anchor="end" font-size="11" fill="var(--mute)" font-family="Archivo, sans-serif">${fmtDate(runs[runs.length-1].date)}</text>`;
+    g+=`<text x="${L}" y="${PH-8}" font-size="11" fill="var(--mute)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${fmtDate(runs[0].date)}</text><text x="${PW-Rr}" y="${PH-8}" text-anchor="end" font-size="11" fill="var(--mute)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${fmtDate(runs[runs.length-1].date)}</text>`;
     el.innerHTML=`<svg viewBox="0 0 ${PW} ${PH}" role="img" aria-label="Pace pro Lauf">${g}</svg>`;
   }
 
@@ -1203,10 +1207,10 @@ function renderOverview(){
   const ticks=[0,top/2,top];
   const W=360,H=196,x0=14,x1=290,yT=20,yB=150;
   const X=i=>x0+i*(x1-x0)/11, Y=v=>yB-(v/top)*(yB-yT);
-  let g=ticks.map(t=>`<line x1="${x0}" x2="${x1+8}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${x1+16}" y="${Y(t)+4}" font-size="12" fill="var(--mute)" font-family="Archivo, sans-serif">${t===0?"0":(isRun?t+" km":t+"×")}</text>`).join("");
+  let g=ticks.map(t=>`<line x1="${x0}" x2="${x1+8}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${x1+16}" y="${Y(t)+4}" font-size="12" fill="var(--mute)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${t===0?"0":(isRun?t+" km":t+"×")}</text>`).join("");
   const mlabs=[]; weeks.forEach((ws,i)=>{ if(i===0||ws.getMonth()!==weeks[i-1].getMonth()) mlabs.push([i,MONTHS[ws.getMonth()].toUpperCase()]); });
   if(mlabs.length>1 && mlabs[1][0]-mlabs[0][0]<3) mlabs.shift();
-  g+=mlabs.map(([i,t])=>`<text x="${X(i)}" y="182" text-anchor="middle" font-size="12" fill="var(--mute)" font-family="Archivo, sans-serif">${t}</text>`).join("");
+  g+=mlabs.map(([i,t])=>`<text x="${X(i)}" y="182" text-anchor="middle" font-size="12" fill="var(--mute)" font-family="Instrument Sans, Helvetica, Arial, sans-serif">${t}</text>`).join("");
   g+=`<line x1="${X(ovSel)}" x2="${X(ovSel)}" y1="${yT-8}" y2="${yB}" stroke="var(--fg)" stroke-width="2"/>`;
   g+=`<polyline points="${vals.map((v,i)=>`${X(i)},${Y(v)}`).join(" ")}" fill="none" stroke="var(--fg)" stroke-width="2.5" stroke-linejoin="round"/>`;
   g+=vals.map((v,i)=>i===ovSel

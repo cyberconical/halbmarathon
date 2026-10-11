@@ -17,16 +17,16 @@ Neue Installationen starten mit sinnvollen Standardwerten: nur Krafttraining am 
 
 ## Herunterladen und mit KI anpassen
 
-Die ganze App besteht aus einer einzigen Datei, `index.html`. Deshalb lässt sie sich gut mit KI-Assistenten wie Claude, ChatGPT oder Gemini ändern, auch ohne Programmierkenntnisse und auch am Handy.
+Die App besteht aus einer Datei, `index.html`, und der Schrift im Ordner `fonts`. Deshalb lässt sie sich gut mit KI-Assistenten wie Claude, ChatGPT oder Gemini ändern, auch ohne Programmierkenntnisse und auch am Handy.
 
 ### 1. Herunterladen
 
-- **Nur die App:** In diesem Repository auf `index.html` tippen und oben rechts auf „Download raw file“ gehen.
+- **Nur die App:** In diesem Repository auf `index.html` tippen und oben rechts auf „Download raw file“ gehen. Ohne den Ordner `fonts` daneben nutzt die App die Systemschrift.
 - **Das ganze Projekt:** Auf „Code“ und dann „Download ZIP“ tippen. Mit Git: `git clone https://github.com/cyberconical/halbmarathon.git`
 
 ### 2. Änderung beschreiben
 
-1. Die Datei `index.html` in einen KI-Chat hochladen. Mit rund 65 KB passt sie in aktuelle Modelle.
+1. Die Datei `index.html` in einen KI-Chat hochladen. Mit rund 110 KB passt sie in aktuelle Modelle.
 2. Mit der folgenden Vorlage eine Änderung pro Anfrage beschreiben.
 3. Die vollständige neue Datei zurückverlangen, keine Ausschnitte.
 
@@ -47,8 +47,9 @@ Regeln:
   erhalten. Das Skript "saved-data" bleibt im Original leer (null).
 - Design: schwarz-weiß, minimal, bestehende CSS-Variablen nutzen. Gut
   bedienbar mit dem Daumen auf einem Handy.
-- Keine externen Bibliotheken und keine Netzwerkaufrufe, außer der
-  bestehenden Schrift.
+- Keine externen Bibliotheken, keine Netzwerkaufrufe und keine
+  Google-Dienste (kein Play Services, kein Firebase). Die Schrift liegt
+  lokal im Ordner fonts.
 - Texte auf Deutsch.
 ```
 
@@ -120,18 +121,23 @@ Der Build lässt sich auch manuell über den Reiter „Actions“ starten. Die A
 
 | Teil | Umsetzung |
 |---|---|
-| App | Eine einzige Datei, `index.html`, mit HTML, CSS und JavaScript ohne Frameworks |
+| App | Eine Datei, `index.html`, mit HTML, CSS und JavaScript ohne Frameworks |
+| Schrift | Instrument Sans (SIL Open Font License 1.1), lokal in `fonts/`, keine Aufrufe an Google |
 | Speicher | `localStorage` im WebView, ein JSON-Datensatz |
 | Android-Hülle | [Capacitor](https://capacitorjs.com) 6, Plugins für Dateien und Teilen |
 | Build | GitHub Actions (`.github/workflows/build.yml`), Node 20, Java 17 |
+| Datenschutz im Build | Der Build entfernt das Google-Services-Plugin und schaltet die automatische Cloud-Sicherung von Android (`allowBackup`) ab |
 | Versionsnummer | `versionCode` entspricht der laufenden Build-Nummer |
+| Lizenz | GPL-3.0-or-later, siehe `LICENSE` |
 
 Der Build erzeugt das Android-Projekt bei jedem Lauf neu. Im Repository liegen deshalb nur:
 
 ```
 index.html                    die App
+fonts/                        Schrift mit Lizenztext
 .github/workflows/build.yml   Bauanleitung, Signierung, Upload ans Release
 docs/entwicklung.md           diese Datei
+LICENSE                       GNU General Public License v3
 README.md                     Überblick für Nutzer
 ```
 

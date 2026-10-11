@@ -25,12 +25,27 @@ jobs:
 
       - name: Projekt vorbereiten
         run: |
-          mkdir www && cp index.html www/
+          mkdir www && cp index.html www/ && cp -r fonts www/
           npm init -y
           npm install @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
           npm install -D @capacitor/cli@6
           echo '{"appId":"de.halbmarathon.app","appName":"Halbmarathon","webDir":"www"}' > capacitor.config.json
           npx cap add android
+          # Keine Google-Dienste und keine automatische Cloud-Sicherung der App-Daten
+          python3 - <<'PY'
+          import re
+          p = "android/app/build.gradle"
+          t = open(p).read()
+          t = re.sub(r"try \{\s*def servicesJSON.*?\n\}\s*catch\(Exception e\) \{.*?\n\}\n?", "", t, flags=re.S)
+          open(p, "w").write(t)
+          p = "android/build.gradle"
+          t = open(p).read()
+          t = "\n".join(l for l in t.splitlines() if "com.google.gms:google-services" not in l) + "\n"
+          open(p, "w").write(t)
+          PY
+          sed -i 's/android:allowBackup="true"/android:allowBackup="false"/' android/app/src/main/AndroidManifest.xml
+          if grep -rn "google-services" android --include=*.gradle; then echo "Google-Plugin ist noch eingebunden" >&2; exit 1; fi
+          grep -q 'android:allowBackup="false"' android/app/src/main/AndroidManifest.xml || { echo "allowBackup nicht deaktiviert" >&2; exit 1; }
           python3 -c "import PIL" 2>/dev/null || pip install --break-system-packages pillow
           python3 - <<'PY'
           import os

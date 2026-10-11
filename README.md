@@ -47,7 +47,8 @@ Voraussetzung: Android 5.1 oder neuer.
 ## Daten und Datenschutz
 
 - Alle Einträge liegen im privaten Speicher der App. Es gibt keinen Server und kein Konto.
-- Beim Start mit Internetverbindung lädt die App die Schriftart „Archivo“ von Google Fonts. Ohne Verbindung nutzt sie eine Standardschrift. Deine Einträge werden dabei nicht übertragen.
+- Die App ruft keine Server auf. Sie nutzt keine Google-Dienste, keine Werbung und keine Tracker. Die Schrift liegt in der App.
+- Android sichert die App-Daten nicht automatisch in der Cloud. Deine Einträge verlassen das Gerät nur, wenn du selbst ein Backup teilst.
 - Beim Deinstallieren oder beim Löschen der App-Daten gehen die Einträge verloren. Updates über Obtainium behalten sie.
 
 ### Backup
@@ -59,7 +60,7 @@ Die Backup-Datei enthält alle deine Einträge. Teile sie nicht über öffentlic
 
 ## Entwicklung
 
-Die ganze App steckt in einer einzigen Datei, `index.html`, ohne Frameworks. Als Android-App wird sie mit [Capacitor](https://capacitorjs.com) verpackt, den Build übernimmt GitHub Actions.
+Die App besteht aus einer Datei, `index.html`, ohne Frameworks, und der mitgelieferten Schrift im Ordner `fonts`. Als Android-App wird sie mit [Capacitor](https://capacitorjs.com) verpackt, den Build übernimmt GitHub Actions.
 
 Zum Ausprobieren im Browser:
 
@@ -73,7 +74,15 @@ Wie du die App anpasst, ein Release veröffentlichst und was das Datenmodell ent
 
 ```
 index.html                    die App
+fonts/                        Schrift Instrument Sans mit Lizenztext
 .github/workflows/build.yml   Build, Signierung und Upload ans Release
 docs/entwicklung.md           Anpassen, Datenmodell, Veröffentlichen
+LICENSE                       GNU General Public License v3
 README.md                     diese Datei
 ```
+
+## Lizenz
+
+Dieses Projekt steht unter der [GNU General Public License, Version 3](LICENSE) oder, nach deiner Wahl, einer späteren Version (GPL-3.0-or-later). Du darfst die App nutzen, ändern und weitergeben. Änderungen, die du weitergibst, müssen unter derselben Lizenz offen bleiben.
+
+Die Schrift [Instrument Sans](https://github.com/Instrument/instrument-sans) steht unter der SIL Open Font License 1.1, der Lizenztext liegt in `fonts/OFL.txt`.
