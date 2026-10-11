@@ -2321,8 +2321,10 @@ function mapFit(el){
   const st=MAPS.get(el)||mapState(el), [w,h]=mapSize(el), b=st.b;
   const bw=Math.max(b[2]-b[0],300), bh=Math.max(b[3]-b[1],300);
   st.sized=el.clientWidth>0;
-  st.cx=(b[0]+b[2])/2; st.cy=(b[1]+b[3])/2;
-  st.upp=Math.max(bw/Math.max(40,w-64), bh/Math.max(40,h-64)); st.fit=st.upp;
+  // margins in pixels; the right side keeps room for the buttons, the route is centred in the free area
+  const L=24, Rt=60, T=28, B=36;
+  st.upp=Math.max(bw/Math.max(40,w-L-Rt), bh/Math.max(40,h-T-B)); st.fit=st.upp;
+  st.cx=(b[0]+b[2])/2+(Rt-L)/2*st.upp; st.cy=(b[1]+b[3])/2+(B-T)/2*st.upp;
   mapDraw(el);
 }
 function mapDraw(el){

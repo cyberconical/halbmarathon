@@ -1,97 +1,101 @@
-# Halbmarathon
+# Half Marathon
 
-Eine schlanke Android-App, die dich in 27 Wochen zum Halbmarathon begleitet: Trainingsplan, Lauftagebuch, Gewohnheiten und Statistik an einem Ort. Sie läuft komplett offline, alle Daten bleiben auf deinem Gerät.
+A lean Android app that takes you to a half marathon in 27 weeks: training plan, run log, habits and statistics in one place. It runs completely offline, and all data stays on your device.
 
-## Funktionen
+The app is in English, with German as an option under Settings, Language. Black and white, it follows the light or dark mode of your device.
+
+Detailed guides, the architecture and the low-code manifesto are in the [wiki](https://github.com/cyberconical/halbmarathon/wiki). Its pages live in `docs/wiki/` and are published from there.
+
+## Features
 
 **Training**
-- Ein Plan über 27 Wochen mit zwei Läufen pro Woche, in fünf Phasen vom Wiedereinstieg bis zur Wettkampfwoche. Er richtet sich nach deinem Wettkampftag.
-- Läufe mit Kilometern, Zeit, Gefühl, Schuhen und Tageszeit eintragen.
-- Zusatzeinheiten wie Kraft, Bouldern oder Yoga an drei frei wählbaren Wochentagen.
-- Mit einem Tipp festhalten, was du heute gemacht hast. Jede Einheit lässt sich anpassen, „Zurück zum Plan“ stellt den Vorschlag wieder her.
-- Optional per GPS aufzeichnen: Strecke, Zeit, Pace, jeder Intervall-Abschnitt des Plans und jeder Kilometer. Bei Intervallen vibriert das Handy zum Wechsel, der Bildschirm darf aus bleiben.
-- Die gelaufene Route erscheint als Karte im Lauf und, übereinandergelegt, in der Statistik. Die Karte ist eine gezeichnete Linie, es werden keine Kartenkacheln geladen.
+- A 27-week plan with two runs per week, in five phases from comeback to race week. It aligns itself to your race day.
+- Log runs with kilometers, time, feel, shoes and time of day.
+- Extra sessions such as strength, bouldering or yoga on three days of your choice.
+- Log what you did today with one tap. Every session can be adjusted, and “Back to plan” restores the suggestion.
+- Optional GPS recording: distance, time, pace, every interval segment of the plan and every kilometer. For intervals the phone vibrates at each change, and the screen may stay off.
+- The route appears as a map in the run and, overlaid, in the stats. Drag to move it, pinch, double tap or use + and − to zoom, or open it full screen. GPS noise is smoothed so the line follows your path. The map is a drawn line; no map tiles are loaded.
 
-**Gewohnheiten**
-- Eigene Gewohnheiten anlegen, pro Tag abhaken oder eine Zahl eintragen.
-- Serien und Wochendurchschnitt auf einen Blick.
+**Habits**
+- Create your own habits, check them off per day or enter a number.
+- Streaks and weekly average at a glance.
 
-**Statistik**
-- Wochenübersicht je Sportart, Kilometer pro Woche und Pace-Verlauf.
-- Vergleich nach Schuhtyp und Tageszeit.
-- Learnings und Probleme festhalten und als gelöst markieren.
+**Stats**
+- Weekly overview per sport, kilometers per week and pace trend.
+- Comparison by shoe type and time of day.
+- Record learnings and issues and mark them as solved.
 
-**Einstellungen**
-- Wettkampftag und Zielzeit, daraus wird die Zielpace berechnet.
-- Eine Körperstelle, die du im Blick behalten willst, zum Beispiel das Knie.
-- Rekorde und persönliche Ziele je Sportart.
-- GPS und Route: Schutzbereich um den Start und ob die Route gespeichert wird.
-
-Die App ist auf Deutsch. Das Design ist schwarz-weiß und folgt dem hellen oder dunklen Modus des Geräts.
+**Settings**
+- Language: English or German.
+- Race day and goal time, which give the goal pace.
+- A body part you want to keep an eye on, for example your knee.
+- Records and personal goals per sport.
+- GPS and route: privacy zone around the start and whether the route is saved.
+- Diagnostics: an anonymous log for when a recording stops.
 
 ## Installation
 
-Die App gibt es nicht in einem Store. Am einfachsten geht es mit [Obtainium](https://github.com/ImranR98/Obtainium), das neue Versionen automatisch erkennt:
+The app is not in a store. The easiest way is [Obtainium](https://github.com/ImranR98/Obtainium), which detects new versions automatically:
 
-1. Obtainium installieren.
-2. In Obtainium „App hinzufügen“ tippen und `https://github.com/cyberconical/halbmarathon` einfügen.
-3. „Hinzufügen“ und dann „Installieren“ tippen. Android fragt einmalig nach der Erlaubnis, Apps aus dieser Quelle zu installieren.
+1. Install Obtainium.
+2. In Obtainium, tap “Add app” and paste `https://github.com/cyberconical/halbmarathon`.
+3. Tap “Add” and then “Install”. Android asks once for permission to install apps from this source.
 
-Alternativ lädst du `halbmarathon.apk` aus dem [neuesten Release](https://github.com/cyberconical/halbmarathon/releases/latest) herunter und installierst sie von Hand.
+Alternatively, download `halbmarathon.apk` from the [latest release](https://github.com/cyberconical/halbmarathon/releases/latest) and install it by hand.
 
-Voraussetzung: Android 5.1 oder neuer.
+Requirement: Android 5.1 or newer.
 
-Ausführliche Anleitungen, die Architektur und das Low-Code-Manifest stehen im [Wiki](https://github.com/cyberconical/halbmarathon/wiki). Die Seiten liegen unter `docs/wiki/` und werden von dort veröffentlicht.
+## Getting started
 
-## Erste Schritte
+1. Open the settings at the top right and enter your race day and goal time. Choose your language there too.
+2. Log your first run in the **Training** tab.
+3. Save a backup regularly (see below).
 
-1. Oben rechts die Einstellungen öffnen und Wettkampftag und Zielzeit eintragen.
-2. Im Tab **Training** deinen ersten Lauf eintragen.
-3. Regelmäßig ein Backup speichern (siehe unten).
+## Data and privacy
 
-## Daten und Datenschutz
-
-- Alle Einträge liegen im privaten Speicher der App. Es gibt keinen Server und kein Konto.
-- Die App ruft keine Server auf. Sie nutzt keine Google-Dienste, keine Werbung und keine Tracker. Die Schrift liegt in der App.
-- Der Standort wird nur während einer Aufzeichnung genutzt und nie gesendet. Die App verwendet dafür das GPS des Geräts direkt, nicht die Google-Standortdienste. Die rohen Messpunkte bleiben im Arbeitsspeicher. Gespeichert wird erst das Ergebnis, auf Wunsch mit Route.
-- Unter Einstellungen gibt es ein **Diagnose-Protokoll**, das klären hilft, warum eine Aufzeichnung abbricht. Es hält nur technische Ereignisse fest, nie Orte, Strecken, Datum, Namen oder eine Gerätekennung. Du kannst es ansehen, teilen, löschen oder ausschalten. Es verlässt das Gerät nur, wenn du es selbst teilst.
-- Ein einstellbarer **Schutzbereich** (Standard 300 m) um den Start wird nie gespeichert. Strecke und Zeit zählen aber vollständig. Er schützt vor dem Naheliegenden, ersetzt aber keine Vorsicht: Wer deine Route kennt, kann die Gegend erahnen.
-- Android sichert die App-Daten nicht automatisch in der Cloud. Deine Einträge verlassen das Gerät nur, wenn du selbst ein Backup teilst.
-- Beim Deinstallieren oder beim Löschen der App-Daten gehen die Einträge verloren. Updates über Obtainium behalten sie.
+- All entries live in the app's private storage. There is no server and no account.
+- The app calls no servers. It uses no Google services, no ads and no trackers. The font ships with the app.
+- Location is used only during a recording and is never sent. The app reads the device's GPS directly, not Google's location services. Raw fixes stay in memory. Only the result is stored, with the route if you want.
+- An adjustable **privacy zone** (300 m by default) around the start is never stored. Distance and time still count in full. It protects against the obvious but is no substitute for caution: someone who knows your route can guess the area.
+- Under Settings there is a **diagnostic log** that helps find out why a recording stops. It only records technical events, never places, distances, dates, names or a device ID. You can view, share, delete or switch it off. It only leaves the device if you share it.
+- Android does not back up the app data to the cloud. Your entries only leave the device if you share a backup yourself.
+- Uninstalling the app or clearing its data deletes your entries. Updates through Obtainium keep them.
 
 ### Backup
 
-- **Sichern:** Oben auf „Backup speichern“ tippen und im Teilen-Menü einen Ort wählen, zum Beispiel Drive oder Dateien.
-- **Wiederherstellen:** Ganz unten auf „Backup laden“ tippen und die Datei auswählen.
+- **Save:** Tap “Save backup” at the top and choose a place in the share menu, for example Drive or Files.
+- **Restore:** Tap “Load backup” at the very bottom and choose the file.
 
-Die Backup-Datei enthält alle deine Einträge und Routen, unverschlüsselt. Teile sie nicht über öffentliche Links und lade sie nicht in ein öffentliches Repository hoch.
+The backup file contains all your entries and routes, unencrypted. Don't share it via public links and never upload it to a public repository.
 
-## Entwicklung
+## Development
 
-Die App besteht aus einer Datei, `index.html`, ohne Frameworks, und der mitgelieferten Schrift im Ordner `fonts`. Als Android-App wird sie mit [Capacitor](https://capacitorjs.com) verpackt, den Build übernimmt GitHub Actions.
+The app is one file, `index.html`, without frameworks, plus the bundled font in `fonts`. It is packaged as an Android app with [Capacitor](https://capacitorjs.com), and GitHub Actions does the build.
 
-Zum Ausprobieren im Browser:
+To try it in the browser:
 
 ```
 python3 -m http.server
 ```
 
-Danach `http://localhost:8000` öffnen. Der Browser speichert getrennt von der App, deine echten Daten bleiben unberührt.
+Then open `http://localhost:8000`. The browser stores data separately from the app, so your real data stays untouched.
 
-Wie du die App anpasst, ein Release veröffentlichst und was das Datenmodell enthält, steht in [docs/entwicklung.md](docs/entwicklung.md).
+How to customize the app, publish a release and what the data model contains is in [docs/development.md](docs/development.md) and in the wiki.
 
 ```
-index.html                    die App
-plugins/run-tracker/          GPS-Aufzeichnung für Android (ohne Google-Dienste)
-fonts/                        Schrift Instrument Sans mit Lizenztext
-.github/workflows/build.yml   Build, Signierung und Upload ans Release
-docs/entwicklung.md           Anpassen, Datenmodell, Veröffentlichen
+index.html                    the app (English source text, German catalog in the script "i18n")
+plugins/run-tracker/          GPS recording for Android (no Google services)
+fonts/                        Instrument Sans font with license text
+.github/workflows/build.yml   build, signing and upload to the release
+.github/workflows/wiki.yml    publishes docs/wiki to the GitHub wiki
+docs/development.md           customizing, data model, publishing
+docs/wiki/                    the wiki pages
 LICENSE                       GNU General Public License v3
-README.md                     diese Datei
+README.md                     this file
 ```
 
-## Lizenz
+## License
 
-Dieses Projekt steht unter der [GNU General Public License, Version 3](LICENSE) oder, nach deiner Wahl, einer späteren Version (GPL-3.0-or-later). Du darfst die App nutzen, ändern und weitergeben. Änderungen, die du weitergibst, müssen unter derselben Lizenz offen bleiben.
+This project is licensed under the [GNU General Public License, version 3](LICENSE) or, at your option, any later version (GPL-3.0-or-later). You may use, change and share the app. Changes you share must stay open under the same license.
 
-Die Schrift [Instrument Sans](https://github.com/Instrument/instrument-sans) steht unter der SIL Open Font License 1.1, der Lizenztext liegt in `fonts/OFL.txt`.
+The [Instrument Sans](https://github.com/Instrument/instrument-sans) font is licensed under the SIL Open Font License 1.1; the license text is in `fonts/OFL.txt`.

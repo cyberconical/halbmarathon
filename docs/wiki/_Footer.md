@@ -1,1 +1,1 @@
-Halbmarathon · GPL-3.0-or-later · [Repository](https://github.com/cyberconical/halbmarathon) · Diese Seiten stehen im Repository unter `docs/wiki/` und werden von dort ins Wiki veröffentlicht. Änderungen bitte dort per Pull Request.
+Half Marathon · GPL-3.0-or-later · [Repository](https://github.com/cyberconical/halbmarathon) · These pages live in the repository under `docs/wiki/` and are published to the wiki from there. Please change them there through a pull request.

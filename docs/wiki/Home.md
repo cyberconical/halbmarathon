@@ -1,49 +1,50 @@
-# Halbmarathon
+# Half Marathon
 
-Eine schlanke Android-App, die dich in 27 Wochen zum Halbmarathon begleitet: Trainingsplan, Lauftagebuch, GPS-Aufzeichnung, Gewohnheiten und Statistik an einem Ort. Sie läuft komplett offline. Alle Daten bleiben auf deinem Gerät.
+A lean Android app that takes you to a half marathon in 27 weeks: training plan, run log, GPS recording, habits and statistics in one place. It runs completely offline. All data stays on your device.
 
-Das Besondere ist, wie sie gebaut ist: **eine einzige Datei** (`index.html`), ohne Framework, ohne Server, mit einem winzigen Android-Rahmen. Sie lässt sich deshalb auch ohne Programmierkenntnisse mit KI-Assistenten anpassen. Wie das gedacht ist, steht im [[Low-Code-Manifest|Low-Code-Manifest]].
+What makes it special is how it is built: **a single file** (`index.html`), no framework, no server, with a tiny Android shell. That is why it can be customized with AI assistants even without programming skills. The idea behind it is in the [[Low-code manifesto|Low-Code-Manifesto]].
 
-## In Kürze
+## At a glance
 
 | | |
 |---|---|
-| Plan | 27 Wochen, zwei Läufe pro Woche, fünf Phasen vom Wiedereinstieg bis zur Wettkampfwoche |
-| Plattform | Android 5.1 oder neuer |
-| Daten | nur auf dem Gerät, kein Konto, kein Server, keine Google-Dienste |
-| GPS | optional, mit Intervall-Signalen per Vibration, Schutzbereich um den Start und Route als gezeichnete Linie (keine Kartenkacheln) |
-| Code | `index.html` (rund 145 KB, gut 2.100 Zeilen), dazu ein Java-Plugin für den GPS-Dienst |
-| Design | schwarz-weiß, folgt dem hellen oder dunklen Modus des Geräts |
-| Sprache | Deutsch |
-| Lizenz | GPL-3.0-or-later |
+| Plan | 27 weeks, two runs per week, five phases from comeback to race week |
+| Platform | Android 5.1 or newer |
+| Languages | English (default) and German, switchable under Settings |
+| Data | only on the device: no account, no server, no Google services |
+| GPS | optional, with interval cues by vibration, a privacy zone around the start, and a smoothed route on a movable, zoomable map (no map tiles) |
+| Code | `index.html` (about 170 KB) plus a Java plugin for the GPS service |
+| Design | black and white, follows the device's light or dark mode |
+| License | GPL-3.0-or-later |
 
-## Wegweiser
+## Where to go
 
-**Die App benutzen**
+**Using the app**
 
-- [[Installation|Installation]]: Obtainium, APK, Updates
-- [[Erste-Schritte|Erste-Schritte]]: die ersten fünf Minuten
-- [[Training-und-Plan|Training-und-Plan]]: Wochenrhythmus, Phasen, Einheiten anpassen, Läufe eintragen
-- [[GPS-Aufzeichnung|GPS-Aufzeichnung]]: Strecke, Intervalle, Schutzbereich, Route
-- [[Gewohnheiten|Gewohnheiten]]
-- [[Statistik|Statistik]]: Kennzahlen, Wochenübersicht je Sportart, Learnings
-- [[Einstellungen|Einstellungen]]
-- [[Backup-und-Daten|Backup-und-Daten]]
-- [[Datenschutz|Datenschutz]]
-- [[FAQ-und-Glossar|FAQ-und-Glossar]]
+- [[Installation|Installation]]: Obtainium, APK, updates
+- [[Getting started|Getting-Started]]: the first five minutes
+- [[Training and plan|Training-and-Plan]]: weekly rhythm, phases, adjusting sessions, logging runs
+- [[GPS recording|GPS-Recording]]: distance, intervals, privacy zone, map
+- [[Habits|Habits]]
+- [[Stats|Stats]]: key figures, weekly overview per sport, learnings
+- [[Settings|Settings]]
+- [[Backup and data|Backup-and-Data]]
+- [[Privacy|Privacy]]
+- [[FAQ and glossary|FAQ-and-Glossary]]
 
-**Verstehen, wie es gebaut ist**
+**Understanding how it is built**
 
-- [[Low-Code-Manifest|Low-Code-Manifest]]: die Grundsätze hinter der App
-- [[Architektur|Architektur]]: Bausteine, Datenflüsse, Diagramme
-- [[Datenmodell|Datenmodell]]: der Datensatz, Speicherschlüssel, Abwärtskompatibilität
-- [[Auswertungs-Engine|Auswertungs-Engine]]: Abschnitte lesen, Strecke rechnen, Route bauen
-- [[Android-Plugin|Android-Plugin]]: Vordergrunddienst, Bridge, Diagnose-Protokoll
-- [[Build-und-Release|Build-und-Release]]: GitHub Actions, Signierung, Prüfungen
+- [[Low-code manifesto|Low-Code-Manifesto]]: the principles behind the app
+- [[Architecture|Architecture]]: building blocks, data flows, diagrams
+- [[Data model|Data-Model]]: the data set, storage keys, backward compatibility
+- [[Analysis engine|Analysis-Engine]]: reading segments, computing distance, smoothing and building the route
+- [[Android plugin|Android-Plugin]]: foreground service, bridge, diagnostic log
+- [[Translations|Translations]]: how English and German work, adding a language
+- [[Build and release|Build-and-Release]]: GitHub Actions, signing, checks
 
-**Selbst ändern und mitmachen**
+**Changing it yourself**
 
-- [[Mit-KI-anpassen|Mit-KI-anpassen]]: Vorlage, Rezepte, Checkliste
-- [[Plan-anpassen|Plan-anpassen]]: Wochen, Phasen, Beschreibungen
-- [[Mitwirken-und-Testen|Mitwirken-und-Testen]]
-- [[Fehlersuche|Fehlersuche]]: wenn etwas nicht klappt, inklusive Diagnose-Protokoll
+- [[Customizing with AI|Customizing-with-AI]]: template, recipes, checklist
+- [[Customizing the plan|Customizing-the-Plan]]: weeks, phases, descriptions
+- [[Contributing and testing|Contributing-and-Testing]]
+- [[Troubleshooting|Troubleshooting]]: when something doesn't work, including the diagnostic log

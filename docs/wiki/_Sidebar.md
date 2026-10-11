@@ -1,27 +1,28 @@
-**[[Halbmarathon|Home]]**
+**[[Half Marathon|Home]]**
 
-**Benutzen**
+**Use**
 - [[Installation|Installation]]
-- [[Erste-Schritte|Erste-Schritte]]
-- [[Training-und-Plan|Training-und-Plan]]
-- [[GPS-Aufzeichnung|GPS-Aufzeichnung]]
-- [[Gewohnheiten|Gewohnheiten]]
-- [[Statistik|Statistik]]
-- [[Einstellungen|Einstellungen]]
-- [[Backup-und-Daten|Backup-und-Daten]]
-- [[Datenschutz|Datenschutz]]
-- [[FAQ-und-Glossar|FAQ-und-Glossar]]
+- [[Getting started|Getting-Started]]
+- [[Training and plan|Training-and-Plan]]
+- [[GPS recording|GPS-Recording]]
+- [[Habits|Habits]]
+- [[Stats|Stats]]
+- [[Settings|Settings]]
+- [[Backup and data|Backup-and-Data]]
+- [[Privacy|Privacy]]
+- [[FAQ and glossary|FAQ-and-Glossary]]
 
-**Verstehen**
-- [[Low-Code-Manifest|Low-Code-Manifest]]
-- [[Architektur|Architektur]]
-- [[Datenmodell|Datenmodell]]
-- [[Auswertungs-Engine|Auswertungs-Engine]]
-- [[Android-Plugin|Android-Plugin]]
-- [[Build-und-Release|Build-und-Release]]
+**Understand**
+- [[Low-code manifesto|Low-Code-Manifesto]]
+- [[Architecture|Architecture]]
+- [[Data model|Data-Model]]
+- [[Analysis engine|Analysis-Engine]]
+- [[Android plugin|Android-Plugin]]
+- [[Translations|Translations]]
+- [[Build and release|Build-and-Release]]
 
-**Ändern**
-- [[Mit-KI-anpassen|Mit-KI-anpassen]]
-- [[Plan-anpassen|Plan-anpassen]]
-- [[Mitwirken-und-Testen|Mitwirken-und-Testen]]
-- [[Fehlersuche|Fehlersuche]]
+**Change**
+- [[Customizing with AI|Customizing-with-AI]]
+- [[Customizing the plan|Customizing-the-Plan]]
+- [[Contributing and testing|Contributing-and-Testing]]
+- [[Troubleshooting|Troubleshooting]]

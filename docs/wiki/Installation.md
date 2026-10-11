@@ -1,29 +1,31 @@
 # Installation
 
-Die App gibt es nicht in einem Store. Sie wird als signierte APK-Datei über GitHub verteilt.
+The app is not in a store. It is distributed as a signed APK file through GitHub.
 
-## Mit Obtainium (empfohlen)
+## With Obtainium (recommended)
 
-[Obtainium](https://github.com/ImranR98/Obtainium) erkennt neue Versionen automatisch und aktualisiert die App.
+[Obtainium](https://github.com/ImranR98/Obtainium) detects new versions automatically and updates the app.
 
-1. Obtainium installieren.
-2. In Obtainium „App hinzufügen“ tippen und `https://github.com/cyberconical/halbmarathon` einfügen.
-3. „Hinzufügen“ und dann „Installieren“ tippen. Android fragt einmalig nach der Erlaubnis, Apps aus dieser Quelle zu installieren.
+1. Install Obtainium.
+2. In Obtainium, tap “Add app” and paste `https://github.com/cyberconical/halbmarathon`.
+3. Tap “Add” and then “Install”. Android asks once for permission to install apps from this source.
 
-## Von Hand
+## By hand
 
-1. Im [neuesten Release](https://github.com/cyberconical/halbmarathon/releases/latest) die Datei `halbmarathon.apk` herunterladen.
-2. Die Datei öffnen und die Installation erlauben.
+1. Download `halbmarathon.apk` from the [latest release](https://github.com/cyberconical/halbmarathon/releases/latest).
+2. Open the file and allow the installation.
 
-Voraussetzung: **Android 5.1 oder neuer**.
+Requirement: **Android 5.1 or newer**.
 
-## Updates und deine Daten
+On the home screen the app is called “Half Marathon”, on phones set to German “Halbmarathon”. The language inside the app is chosen separately under Settings, see [[Settings|Settings]].
 
-- Updates über Obtainium oder durch Drüberinstallieren **behalten alle Einträge**.
-- Jede Version ist mit demselben Schlüssel signiert. Nur dann lässt sich eine installierte App aktualisieren. Siehe [[Build-und-Release|Build-und-Release]].
-- **Deinstallieren oder „Daten löschen“ entfernt alle Einträge.** Speichere vorher ein Backup, siehe [[Backup-und-Daten|Backup-und-Daten]].
-- Installiere APK-Dateien nur aus diesem Repository.
+## Updates and your data
 
-## Ohne Installation im Browser
+- Updates through Obtainium or by installing over the existing app **keep all entries**.
+- Every version is signed with the same key. Only then can an installed app be updated. See [[Build and release|Build-and-Release]].
+- **Uninstalling or “Clear data” removes all entries.** Save a backup first, see [[Backup and data|Backup-and-Data]].
+- Only install APK files from this repository.
 
-`index.html` lässt sich auch direkt im Browser öffnen, am PC per Doppelklick. Der Browser speichert getrennt von der App, deine echten Daten sind also nicht betroffen. Das ist praktisch zum Ausprobieren von Änderungen, siehe [[Mitwirken-und-Testen|Mitwirken-und-Testen]]. Im Browser gibt es keinen Hintergrunddienst: Die GPS-Aufzeichnung funktioniert mit dem Standort des Browsers, aber nur bei geöffnetem Bildschirm.
+## Without installing, in the browser
+
+`index.html` can also be opened directly in a browser, on a PC by double-clicking. The browser stores data separately from the app, so your real data is not affected. That is handy for trying out changes, see [[Contributing and testing|Contributing-and-Testing]]. The browser has no background service: GPS recording uses the browser's location, but only while the screen is on.
