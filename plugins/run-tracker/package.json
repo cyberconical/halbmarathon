@@ -1,0 +1,23 @@
+{
+  "name": "run-tracker",
+  "version": "1.0.0",
+  "description": "GPS-Aufzeichnung für Läufe über den Android-LocationManager. Ohne Google-Dienste.",
+  "license": "GPL-3.0-or-later",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle"
+  ],
+  "keywords": [
+    "capacitor",
+    "plugin",
+    "native"
+  ],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^6.0.0"
+  }
+}
