@@ -1,0 +1,63 @@
+name: Wiki veröffentlichen
+
+# Die Wiki-Seiten liegen im Repository unter docs/wiki/ und werden per Pull Request geändert.
+# Dieser Workflow spiegelt sie ins GitHub-Wiki. Direkte Änderungen im Wiki werden dabei überschrieben.
+# Voraussetzung: Das Wiki existiert. Einmalig im Reiter "Wiki" die erste Seite anlegen (Inhalt egal).
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/wiki/**", ".github/workflows/wiki.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Interne Links prüfen
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          d = "docs/wiki"
+          pages = {f[:-3] for f in os.listdir(d) if f.endswith(".md")}
+          bad = []
+          for f in sorted(os.listdir(d)):
+              if not f.endswith(".md"): continue
+              for m in re.finditer(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", open(os.path.join(d, f), encoding="utf8").read()):
+                  target = (m.group(2) or m.group(1)).strip()
+                  if target != "Home" and target not in pages:
+                      bad.append(f"{f}: [[{m.group(0)[2:-2]}]] -> {target}")
+          if bad:
+              print("Unbekannte Wiki-Seiten:\n" + "\n".join(bad)); sys.exit(1)
+          print(f"{len(pages)} Seiten, alle internen Links ok")
+          PY
+
+      - name: Wiki holen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki; then
+            echo "::error::Das Wiki existiert noch nicht. Einmalig im Reiter 'Wiki' die erste Seite anlegen (Inhalt egal), dann diesen Workflow erneut starten."
+            exit 1
+          fi
+
+      - name: Seiten übertragen
+        run: |
+          find wiki -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -r docs/wiki/. wiki/
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Keine Änderungen am Wiki."; exit 0; fi
+          git commit -m "Wiki aus docs/wiki (${GITHUB_SHA::7})"
+          git push

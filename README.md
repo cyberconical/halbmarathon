@@ -41,6 +41,8 @@ Alternativ lädst du `halbmarathon.apk` aus dem [neuesten Release](https://githu
 
 Voraussetzung: Android 5.1 oder neuer.
 
+Ausführliche Anleitungen, die Architektur und das Low-Code-Manifest stehen im [Wiki](https://github.com/cyberconical/halbmarathon/wiki). Die Seiten liegen unter `docs/wiki/` und werden von dort veröffentlicht.
+
 ## Erste Schritte
 
 1. Oben rechts die Einstellungen öffnen und Wettkampftag und Zielzeit eintragen.
