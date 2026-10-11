@@ -75,59 +75,18 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: APK signieren
+            - name: APK signieren
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          base64 -d > release.keystore <<'EOF'
-          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
-          EOF
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$BT/zipalign" -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-          "$BT/apksigner" sign --ks release.keystore --ks-pass pass:halbmarathon --key-pass pass:halbmarathon --out halbmarathon.apk aligned.apk
+          "$BT/apksigner" sign --ks release.keystore \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+            --out halbmarathon.apk aligned.apk
+          rm release.keystore
           "$BT/apksigner" verify halbmarathon.apk
 
       - name: An Release anhÃ¤ngen
