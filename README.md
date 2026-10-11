@@ -52,6 +52,7 @@ Voraussetzung: Android 5.1 oder neuer.
 - Alle Einträge liegen im privaten Speicher der App. Es gibt keinen Server und kein Konto.
 - Die App ruft keine Server auf. Sie nutzt keine Google-Dienste, keine Werbung und keine Tracker. Die Schrift liegt in der App.
 - Der Standort wird nur während einer Aufzeichnung genutzt und nie gesendet. Die App verwendet dafür das GPS des Geräts direkt, nicht die Google-Standortdienste. Die rohen Messpunkte bleiben im Arbeitsspeicher. Gespeichert wird erst das Ergebnis, auf Wunsch mit Route.
+- Unter Einstellungen gibt es ein **Diagnose-Protokoll**, das klären hilft, warum eine Aufzeichnung abbricht. Es hält nur technische Ereignisse fest, nie Orte, Strecken, Datum, Namen oder eine Gerätekennung. Du kannst es ansehen, teilen, löschen oder ausschalten. Es verlässt das Gerät nur, wenn du es selbst teilst.
 - Ein einstellbarer **Schutzbereich** (Standard 300 m) um den Start wird nie gespeichert. Strecke und Zeit zählen aber vollständig. Er schützt vor dem Naheliegenden, ersetzt aber keine Vorsicht: Wer deine Route kennt, kann die Gegend erahnen.
 - Android sichert die App-Daten nicht automatisch in der Cloud. Deine Einträge verlassen das Gerät nur, wenn du selbst ein Backup teilst.
 - Beim Deinstallieren oder beim Löschen der App-Daten gehen die Einträge verloren. Updates über Obtainium behalten sie.

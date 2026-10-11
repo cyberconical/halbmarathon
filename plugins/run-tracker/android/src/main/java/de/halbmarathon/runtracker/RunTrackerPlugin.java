@@ -34,18 +34,28 @@ public class RunTrackerPlugin extends Plugin {
 
     private static final int MAX_PER_CALL = 2000;
 
+    @Override
+    public void load() {
+        RunLog.init(getContext());
+        RunLog.installCrashHandler();
+        RunLog.add("plugin:load");
+    }
+
     @PluginMethod
     public void start(PluginCall call) {
         if (getPermissionState("location") != PermissionState.GRANTED) {
+            RunLog.add("start:reject PERMISSION");
             call.reject("Der genaue Standort ist nicht erlaubt.", "PERMISSION");
             return;
         }
         LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
         if (lm == null || !lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            RunLog.add("start:reject GPS_OFF");
             call.reject("GPS ist ausgeschaltet.", "GPS_OFF");
             return;
         }
         if (RunTrackerService.running) {
+            RunLog.add("start:reject RUNNING");
             call.reject("Es läuft bereits eine Aufzeichnung.", "RUNNING");
             return;
         }
@@ -59,12 +69,51 @@ public class RunTrackerPlugin extends Plugin {
             }
         } catch (Exception e) {
             RunTrackerService.running = false;
+            RunLog.add("start:fail " + RunLog.describe(e));
             call.reject("Der Aufzeichnungsdienst konnte nicht gestartet werden.", "START_FAILED");
             return;
         }
+        RunLog.add("start:ok");
         JSObject ret = new JSObject();
         ret.put("startedAt", RunTrackerService.startedAt);
         call.resolve(ret);
+    }
+
+    /** Die Oberfläche legt hier ihren kleinen Zustand ab (Pausen, Runden), siehe getStatus(). */
+    @PluginMethod
+    public void saveState(PluginCall call) {
+        String s = call.getString("state", "");
+        RunTrackerService.appState = s == null ? "" : s;
+        call.resolve();
+    }
+
+    /** Ein Ereignis der Oberfläche ins anonyme Protokoll schreiben. RunLog lässt nur harmlose Zeichen zu. */
+    @PluginMethod
+    public void diagLog(PluginCall call) {
+        String e = call.getString("e", "");
+        if (e != null && e.length() > 0) RunLog.add("js:" + e);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getLog(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("text", RunLog.read());
+        ret.put("enabled", RunLog.isEnabled());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void clearLog(PluginCall call) {
+        RunLog.clear();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void setLogEnabled(PluginCall call) {
+        Boolean on = call.getBoolean("on", true);
+        RunLog.setEnabled(on == null || on);
+        call.resolve();
     }
 
     @PluginMethod
@@ -142,6 +191,7 @@ public class RunTrackerPlugin extends Plugin {
         ret.put("startedAt", RunTrackerService.startedAt);
         ret.put("meta", RunTrackerService.meta);
         ret.put("cues", RunTrackerService.cuesJson);
+        ret.put("state", RunTrackerService.appState);
         call.resolve(ret);
     }
 }
