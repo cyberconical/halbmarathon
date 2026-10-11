@@ -1,0 +1,45 @@
+name: Berlin Straßendatei messen
+
+# Nur für diese Messung. Läuft ausschließlich beim Push auf den Messzweig,
+# nie für main und nie für Releases.
+on:
+  push:
+    branches: [claude/berlin-size-check]
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Werkzeuge installieren
+        run: sudo apt-get update && sudo apt-get install -y osmium-tool
+
+      - name: Berlin-Auszug laden (OpenStreetMap, ODbL)
+        run: |
+          curl -fL --retry 3 -o berlin.osm.pbf https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+          ls -l berlin.osm.pbf
+
+      - name: Straßen und Wege filtern
+        run: |
+          osmium tags-filter berlin.osm.pbf w/highway -o highways.osm.pbf --overwrite
+          osmium export highways.osm.pbf -f geojsonseq -o highways.geojsonseq --overwrite
+
+      - name: Wasser und Grün filtern
+        run: |
+          osmium tags-filter berlin.osm.pbf a/natural=water,wood a/leisure=park,nature_reserve a/landuse=forest,reservoir w/waterway=river,canal -o areas.osm.pbf --overwrite
+          osmium export areas.osm.pbf -f geojsonseq -o areas.geojsonseq --overwrite
+
+      - name: Größe messen
+        run: |
+          python3 tools/measure_berlin.py highways.geojsonseq areas.geojsonseq out 4
+          cat out/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ergebnis bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: berlin-size-check
+          path: out/
