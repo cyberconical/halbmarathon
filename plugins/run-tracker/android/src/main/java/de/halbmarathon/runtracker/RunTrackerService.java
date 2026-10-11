@@ -26,11 +26,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Vordergrunddienst für die Laufaufzeichnung.
+ * Foreground service that records a run.
  *
- * Nutzt ausschließlich den Android-LocationManager mit dem GPS-Anbieter. Es werden keine
- * Google-Dienste verwendet. Die Messpunkte liegen nur im Arbeitsspeicher dieses Prozesses
- * und werden nie auf den Datenträger geschrieben.
+ * Uses only the Android LocationManager with the GPS provider. No Google services are used.
+ * Fixes live only in this process's memory and are never written to storage.
  */
 public class RunTrackerService extends Service implements LocationListener {
 
@@ -38,18 +37,20 @@ public class RunTrackerService extends Service implements LocationListener {
     static final int NOTIFICATION_ID = 4711;
     static final int MAX_FIXES = 30000;
 
-    // Gemeinsamer Zustand mit dem Plugin (gleicher Prozess).
+    // State shared with the plugin (same process).
     static final Object LOCK = new Object();
-    static final ArrayList<double[]> FIXES = new ArrayList<>(); // [Zeit ms, Breite, Länge, Genauigkeit m, Tempo m/s]
+    static final ArrayList<double[]> FIXES = new ArrayList<>(); // [time ms, lat, lon, accuracy m, speed m/s]
     static volatile boolean running = false;
     static volatile boolean paused = false;
     static volatile boolean gpsOn = true;
     static volatile long startedAt = 0;
     static volatile String cuesJson = "[]";
     static volatile String meta = "";
-    // Kleiner Zustand der Oberfläche (Pausen, Runden), damit sie nach einem Neustart wieder anknüpfen kann.
-    // Enthält keine Orte und liegt wie die Messpunkte nur im Arbeitsspeicher.
+    // Small UI state (pauses, laps), so the UI can reattach after a restart.
+    // Contains no places and, like the fixes, lives only in memory.
     static volatile String appState = "";
+    // Language of the app ("en" or "de") for the notification texts.
+    static volatile String lang = "en";
     static volatile RunTrackerService instance = null;
 
     private static class Cue {
@@ -65,10 +66,14 @@ public class RunTrackerService extends Service implements LocationListener {
     private final List<Runnable> scheduled = new ArrayList<>();
     private long activeBaseMs = 0;
     private long lastResumeRt = 0;
-    private String notificationText = "GPS aktiv";
+    private String notificationText = "";
 
-    /** Vom Plugin aufgerufen, bevor der Dienst gestartet wird. */
-    static void prepare(String cues, String metaData) {
+    static String txt(String en, String de) {
+        return "de".equals(lang) ? de : en;
+    }
+
+    /** Called by the plugin before the service starts. */
+    static void prepare(String cues, String metaData, String language) {
         synchronized (LOCK) {
             FIXES.clear();
         }
@@ -76,6 +81,7 @@ public class RunTrackerService extends Service implements LocationListener {
         meta = metaData == null ? "" : metaData;
         startedAt = System.currentTimeMillis();
         appState = "";
+        lang = "de".equals(language) ? "de" : "en";
         paused = false;
         gpsOn = true;
         running = true;
@@ -134,7 +140,7 @@ public class RunTrackerService extends Service implements LocationListener {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         RunLog.add("svc:cmd running=" + (running ? 1 : 0) + (intent == null ? " nullIntent" : ""));
-        // Wurde der Prozess beendet, gibt es nichts mehr aufzuzeichnen. Dann nicht neu starten.
+        // If the process was ended there is nothing left to record, so do not restart.
         if (intent == null || !running) {
             leaveQuickly();
             stopSelf();
@@ -144,7 +150,7 @@ public class RunTrackerService extends Service implements LocationListener {
             try {
                 startTracking();
             } catch (Throwable t) {
-                // Ein Fehler beim Einrichten darf die App nie mitreißen.
+                // A failure while setting up must never take the app down.
                 RunLog.add("svc:start-error " + RunLog.describe(t));
                 fail();
             }
@@ -153,8 +159,8 @@ public class RunTrackerService extends Service implements LocationListener {
     }
 
     /**
-     * Wer startForegroundService() aufruft, muss kurz darauf startForeground() aufrufen, sonst beendet
-     * Android die App. Das gilt auch, wenn der Dienst gleich wieder endet.
+     * Whoever calls startForegroundService() must call startForeground() shortly after, otherwise
+     * Android ends the app. That also applies when the service stops right away.
      */
     private void leaveQuickly() {
         try {
@@ -204,8 +210,8 @@ public class RunTrackerService extends Service implements LocationListener {
             fail();
             return;
         }
-        // Nur bei Intervallen mit Signalen muss die CPU wach bleiben, damit die Zeitpunkte stimmen.
-        // Klappt das nicht, läuft die Aufzeichnung trotzdem weiter, nur die Signale können sich verspäten.
+        // Only intervals with cues need the CPU awake, so the cues come on time.
+        // If this fails the recording continues; only the cues may be late.
         if (!cues.isEmpty()) {
             try {
                 PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -277,7 +283,7 @@ public class RunTrackerService extends Service implements LocationListener {
 
     @Override
     public void onDestroy() {
-        // Steht "running" hier noch auf 1, hat das System den Dienst beendet und nicht die Person.
+        // If "running" is still 1 here, the system ended the service, not the person.
         RunLog.add("svc:destroy running=" + (running ? 1 : 0) + " fixes=" + fixCount());
         if (handler != null) cancelCues();
         releaseResources();
@@ -287,7 +293,7 @@ public class RunTrackerService extends Service implements LocationListener {
         super.onDestroy();
     }
 
-    /** Die Person hat die App aus der Übersicht gewischt. Die Aufzeichnung läuft weiter. */
+    /** The person swiped the app away from recents. The recording continues. */
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         RunLog.add("svc:taskRemoved");
@@ -381,15 +387,15 @@ public class RunTrackerService extends Service implements LocationListener {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
-        NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Lauf-Aufzeichnung", NotificationManager.IMPORTANCE_LOW);
-        ch.setDescription("Zeigt an, dass ein Lauf per GPS aufgezeichnet wird.");
+        NotificationChannel ch = new NotificationChannel(CHANNEL_ID, txt("Run recording", "Lauf-Aufzeichnung"), NotificationManager.IMPORTANCE_LOW);
+        ch.setDescription(txt("Shows that a run is being recorded with GPS.", "Zeigt an, dass ein Lauf per GPS aufgezeichnet wird."));
         nm.createNotificationChannel(ch);
     }
 
     private Notification buildNotification() {
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-        b.setContentTitle("Lauf wird aufgezeichnet");
-        b.setContentText(notificationText);
+        b.setContentTitle(txt("Recording your run", "Lauf wird aufgezeichnet"));
+        b.setContentText(notificationText.length() > 0 ? notificationText : txt("GPS active", "GPS aktiv"));
         b.setSmallIcon(android.R.drawable.ic_menu_mylocation);
         b.setOngoing(true);
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -425,7 +431,7 @@ public class RunTrackerService extends Service implements LocationListener {
             if (FIXES.size() < MAX_FIXES) FIXES.add(f);
             n = FIXES.size();
         }
-        // Ins Protokoll kommen nur Zähler und Wartezeiten, nie die Messwerte selbst.
+        // Only counters and waiting times go into the log, never the measurements themselves.
         if (n == 1) RunLog.add("fix:first after=" + ((System.currentTimeMillis() - startedAt) / 1000) + "s");
         else if (n % 500 == 0) RunLog.add("fix:n=" + n);
         if (!gpsOn) RunLog.add("gps:back");

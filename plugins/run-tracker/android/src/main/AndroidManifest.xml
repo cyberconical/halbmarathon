@@ -1,16 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Genauer Standort per GPS. Der ungefähre Standort wird mit angefragt, weil Android 12 und neuer das verlangt. -->
+    <!-- Precise location via GPS. Approximate location is requested too, because Android 12 and newer require it. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- Vordergrunddienst, damit die Aufzeichnung bei ausgeschaltetem Bildschirm weiterläuft -->
+    <!-- Foreground service, so recording continues while the screen is off -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <!-- CPU wach halten, damit die Vibrationssignale bei Intervallen pünktlich kommen. Ohne diese Berechtigung beendet Android die App beim Start einer Aufzeichnung mit Intervallen. -->
+    <!-- Keep the CPU awake so interval vibrations come on time. Without this permission Android ends the app when an interval recording starts. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Anzeige der Benachrichtigung des Dienstes ab Android 13 -->
+    <!-- Show the service notification on Android 13 and newer -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Vibrationssignal beim Wechsel zwischen Intervallen -->
+    <!-- Vibration cue when switching between intervals -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 

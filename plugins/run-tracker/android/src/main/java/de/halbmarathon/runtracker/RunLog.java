@@ -14,15 +14,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Anonymes Diagnose-Protokoll.
+ * Anonymous diagnostic log.
  *
- * Es hält nur technische Ereignisse fest ("Dienst gestartet", "Wake-Lock fehlgeschlagen",
- * "Android hat den Prozess beendet: Speicher"). Nie enthalten sind Orte, Strecken, Uhrzeiten,
- * Datum, Namen oder Gerätekennungen. Die Zeit ist nur die Sekunden seit dem Start des Prozesses.
- * Die Datei liegt im privaten Speicher der App und verlässt das Gerät nur, wenn die Person sie teilt.
+ * It only records technical events ("service started", "wake lock failed",
+ * "Android ended the process: low memory"). It never contains places, distances, clock times,
+ * dates, names or device identifiers. Time is only the seconds since the process started.
+ * The file lives in the app's private storage and only leaves the device if the person shares it.
  *
- * Damit nichts Persönliches hineingelangt, lässt add() nur eine kleine Zeichenmenge zu und
- * ersetzt alles, was wie eine Koordinate aussieht.
+ * So that nothing personal gets in, add() only allows a small set of characters and
+ * replaces anything that looks like a coordinate.
  */
 final class RunLog {
 
@@ -42,7 +42,7 @@ final class RunLog {
 
     private RunLog() {}
 
-    /** Idempotent. Beim ersten Aufruf je Prozess wird vermerkt, warum der vorherige Prozess endete. */
+    /** Idempotent. The first call per process records why the previous process ended. */
     static void init(Context c) {
         if (c == null) return;
         boolean first;
@@ -120,8 +120,8 @@ final class RunLog {
     }
 
     /**
-     * Schreibt bei einem Absturz Klasse und Fundstelle der Ausnahme ins Protokoll, ohne die Meldung.
-     * Danach läuft der bisherige Handler weiter, das Verhalten der App ändert sich nicht.
+     * On a crash, writes the exception class and code location to the log, never its message.
+     * The previous handler then runs as before, so the app behaves exactly as without the log.
      */
     static void installCrashHandler() {
         synchronized (LOCK) {
@@ -141,7 +141,7 @@ final class RunLog {
         });
     }
 
-    /** Kurzbeschreibung einer Ausnahme: Klassenname und Codestelle, nie die Meldung. */
+    /** Short description of an exception: class name and code location, never the message. */
     static String describe(Throwable e) {
         if (e == null) return "null";
         StringBuilder b = new StringBuilder(e.getClass().getSimpleName());
@@ -175,7 +175,7 @@ final class RunLog {
                 || ch == '@' || ch == '$' || ch == '(' || ch == ')';
             b.append(ok ? ch : '?');
         }
-        // Alles, was wie eine Koordinate aussieht (Zahl mit drei oder mehr Nachkommastellen), fällt weg.
+        // Anything that looks like a coordinate (a number with three or more decimals) is removed.
         return b.toString().replaceAll("[0-9]+\\.[0-9]{3,}", "#");
     }
 
@@ -188,7 +188,7 @@ final class RunLog {
             long seen = p.getLong("exitSeen", 0);
             long newest = seen;
             List<ApplicationExitInfo> list = am.getHistoricalProcessExitReasons(appCtx.getPackageName(), 0, 5);
-            for (int i = list.size() - 1; i >= 0; i--) { // alt nach neu
+            for (int i = list.size() - 1; i >= 0; i--) { // oldest to newest
                 ApplicationExitInfo e = list.get(i);
                 long ts = e.getTimestamp();
                 if (ts <= seen) continue;

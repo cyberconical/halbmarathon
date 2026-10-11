@@ -17,11 +17,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 /**
- * Schnittstelle zwischen der App (JavaScript) und dem Aufzeichnungsdienst.
+ * Bridge between the app (JavaScript) and the recording service.
  *
- * Die App holt die Messpunkte mit getFixes() ab. So gehen auch bei ausgeschaltetem Bildschirm
- * keine Punkte verloren, denn der Dienst sammelt weiter und die App liest später nach.
- * Die Berechtigungen laufen über checkPermissions() und requestPermissions() der Basisklasse.
+ * The app fetches fixes with getFixes(). So no points are lost while the screen is off: the service
+ * keeps collecting and the app catches up later.
+ * Permissions use checkPermissions() and requestPermissions() of the base class.
  */
 @CapacitorPlugin(
     name = "RunTracker",
@@ -45,21 +45,21 @@ public class RunTrackerPlugin extends Plugin {
     public void start(PluginCall call) {
         if (getPermissionState("location") != PermissionState.GRANTED) {
             RunLog.add("start:reject PERMISSION");
-            call.reject("Der genaue Standort ist nicht erlaubt.", "PERMISSION");
+            call.reject("Precise location is not allowed.", "PERMISSION");
             return;
         }
         LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
         if (lm == null || !lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             RunLog.add("start:reject GPS_OFF");
-            call.reject("GPS ist ausgeschaltet.", "GPS_OFF");
+            call.reject("GPS is turned off.", "GPS_OFF");
             return;
         }
         if (RunTrackerService.running) {
             RunLog.add("start:reject RUNNING");
-            call.reject("Es läuft bereits eine Aufzeichnung.", "RUNNING");
+            call.reject("A recording is already running.", "RUNNING");
             return;
         }
-        RunTrackerService.prepare(call.getString("cues", "[]"), call.getString("meta", ""));
+        RunTrackerService.prepare(call.getString("cues", "[]"), call.getString("meta", ""), call.getString("lang", "en"));
         Intent intent = new Intent(getContext(), RunTrackerService.class);
         try {
             if (Build.VERSION.SDK_INT >= 26) {
@@ -70,7 +70,7 @@ public class RunTrackerPlugin extends Plugin {
         } catch (Exception e) {
             RunTrackerService.running = false;
             RunLog.add("start:fail " + RunLog.describe(e));
-            call.reject("Der Aufzeichnungsdienst konnte nicht gestartet werden.", "START_FAILED");
+            call.reject("The recording service could not be started.", "START_FAILED");
             return;
         }
         RunLog.add("start:ok");
@@ -79,7 +79,7 @@ public class RunTrackerPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /** Die Oberfläche legt hier ihren kleinen Zustand ab (Pausen, Runden), siehe getStatus(). */
+    /** The UI stores its small state here (pauses, laps), see getStatus(). */
     @PluginMethod
     public void saveState(PluginCall call) {
         String s = call.getString("state", "");
@@ -87,7 +87,7 @@ public class RunTrackerPlugin extends Plugin {
         call.resolve();
     }
 
-    /** Ein Ereignis der Oberfläche ins anonyme Protokoll schreiben. RunLog lässt nur harmlose Zeichen zu. */
+    /** Write a UI event to the anonymous log. RunLog only lets harmless characters through. */
     @PluginMethod
     public void diagLog(PluginCall call) {
         String e = call.getString("e", "");
@@ -144,7 +144,7 @@ public class RunTrackerPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /** Liefert Messpunkte ab Position "from". Nach stop() bleiben sie bis zum nächsten start() abrufbar. */
+    /** Returns fixes from position "from". After stop() they stay available until the next start(). */
     @PluginMethod
     public void getFixes(PluginCall call) {
         int from = Math.max(0, call.getInt("from", 0));
@@ -173,7 +173,7 @@ public class RunTrackerPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /** Zustand der Aufzeichnung, damit die App nach einem Neustart der Oberfläche wieder anknüpfen kann. */
+    /** State of the recording, so the app can reattach after its UI was restarted. */
     @PluginMethod
     public void getStatus(PluginCall call) {
         int count;
