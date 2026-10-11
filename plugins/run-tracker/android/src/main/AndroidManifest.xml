@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Genauer Standort per GPS. Der ungefähre Standort wird mit angefragt, weil Android 12 und neuer das verlangt. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Vordergrunddienst, damit die Aufzeichnung bei ausgeschaltetem Bildschirm weiterläuft -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Anzeige der Benachrichtigung des Dienstes ab Android 13 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Vibrationssignal beim Wechsel zwischen Intervallen -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <application>
+        <service
+            android:name="de.halbmarathon.runtracker.RunTrackerService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+    </application>
+</manifest>

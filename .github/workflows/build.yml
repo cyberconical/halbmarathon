@@ -4,6 +4,8 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+  push:
+    branches: [claude/gps-tracking]
 
 permissions:
   contents: write
@@ -29,6 +31,7 @@ jobs:
           npm init -y
           npm install @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
           npm install -D @capacitor/cli@6
+          npm install --install-links ./plugins/run-tracker
           echo '{"appId":"de.halbmarathon.app","appName":"Halbmarathon","webDir":"www"}' > capacitor.config.json
           npx cap add android
           # Keine Google-Dienste und keine automatische Cloud-Sicherung der App-Daten
