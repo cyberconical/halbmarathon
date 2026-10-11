@@ -247,6 +247,13 @@ dialog.sheet::backdrop{ background:rgba(0,0,0,.5); }
 }
 .toast b{ display:block; font-size:22px; font-weight:800; font-stretch:70%; margin-bottom:2px; }
 .toast.show{ transform:translate(-50%, 0); opacity:1; }
+.toast.undo{ pointer-events:auto; }
+.toast .toast-undo{ display:block; margin-top:10px; padding:7px 14px; background:none; border:2px solid var(--bg); color:var(--bg); font-weight:700; cursor:pointer; border-radius:0; }
+.quick{ margin:18px 0 6px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+.quick .hint{ margin:10px 0 0; }
+.edit-link{ display:block; margin:-4px 0 14px; }
+.wk-foot{ margin-top:16px; display:flex; flex-wrap:wrap; align-items:center; gap:14px; }
+.wk-foot .linkbtn{ margin-top:0; }
 @media (prefers-reduced-motion: reduce){ .toast{ transition:none; } }
 @media (max-width:480px){
   .sess-body{ padding-left:0; }
@@ -439,7 +446,7 @@ const TODS = [["morgen","Morgens"],["mittag","Mittags"],["abend","Abends"],["nac
 const labelOf = (list,v) => { const x=list.find(e=>e[0]===v); return x?x[1]:""; };
 const TAGS = ["Tempo","Ausrüstung","Ernährung","Erholung","Kopf","Sonstiges"];
 
-let SESSIONS = [], RUNS = [];
+let SESSIONS = [], RUNS = [], BASE = [], SKIPPED = [];
 const DAYCHOICES = ["Kraft","Bouldern","Calisthenics","Stretching","Yoga","Schwimmen","Rad","Aus"];
 const goalSec = () => state.profile.goalSec || 7200;
 const goalPace = () => goalSec()/21.0975;
@@ -450,21 +457,42 @@ function applyProfile(){
   START=addDays(addDays(RACE,-((RACE.getDay()+6)%7)),-26*7);
   const hmp=fmtPace(goalPace());
   const boulderish=lab=>/bouldern/i.test(lab);
-  SESSIONS=[];
+  BASE=[];
   PLAN.forEach((w,i)=>{
     const wk=i+1, mon=addDays(START,i*7), late=wk>=26;
     const run=(r,day,off,extra)=>({id:`w${wk}-${day}`,week:wk,kind:"run",day:day==="wed"?"Mi":"So",date:addDays(mon,off),...r,d:r.d.replace("{HMP}",hmp),...extra});
-    if(P.mon!=="Aus") SESSIONS.push({id:`w${wk}-mon`,week:wk,kind:"kraft",day:"Mo",date:mon,label:P.mon,
+    if(P.mon!=="Aus") BASE.push({id:`w${wk}-mon`,week:wk,kind:"kraft",day:"Mo",date:mon,label:P.mon,
       t:late?`${P.mon} leicht`:(P.mon==="Kraft"?"Kraft: Beine & Hüfte":P.mon),
       d:late?"Kurz und leicht, 30 Min. Keine neuen Übungen.":(P.mon==="Kraft"?"Gym oder zu Hause. Die Übungen stehen unter Kraft & Stabilität. Dein wichtigster Schutz vor Überlastung.":"Zusatzeinheit, die dich stabil macht. Locker bis mittel, nicht bis zur Erschöpfung.")});
-    if(P.tue!=="Aus") SESSIONS.push({id:`w${wk}-tue`,week:wk,kind:"boulder",day:"Di",date:addDays(mon,1),label:P.tue,
+    if(P.tue!=="Aus") BASE.push({id:`w${wk}-tue`,week:wk,kind:"boulder",day:"Di",date:addDays(mon,1),label:P.tue,
       t:wk<27?P.tue:`${P.tue} locker`,
       d:wk===27?"Nur leicht. Kein Risiko mehr in der Race Week.":(boulderish(P.tue)?"Abklettern statt abspringen, das schont die Gelenke. Danach 10 Min. Mobility für Hüfte und Beine.":"Locker halten, damit die Beine für den Lauf frisch bleiben.")});
-    SESSIONS.push(run(w[1],"wed",2));
-    if(wk<27 && P.fri!=="Aus") SESSIONS.push({id:`w${wk}-fri`,week:wk,kind:"boulder",day:"Fr",date:addDays(mon,4),label:P.fri,t:P.fri,
+    BASE.push(run(w[1],"wed",2));
+    if(wk<27 && P.fri!=="Aus") BASE.push({id:`w${wk}-fri`,week:wk,kind:"boulder",day:"Fr",date:addDays(mon,4),label:P.fri,t:P.fri,
       d:boulderish(P.fri)?(w[2].min>=90?"Vor dem langen Lauf eher kurz halten und die Beine schonen. Abklettern statt springen.":"Abklettern statt abspringen. Samstag ist Ruhetag, damit die Beine für Sonntag frisch sind."):"Locker halten. Samstag ist Ruhetag, damit die Beine für Sonntag frisch sind."});
-    SESSIONS.push(run(w[2],"sun",6,{race:wk===27}));
+    BASE.push(run(w[2],"sun",6,{race:wk===27}));
   });
+  applyEdits();
+}
+// Eigene Anpassungen liegen getrennt vom Plan (state.edits) und werden darübergelegt.
+// So bleibt der Plan der Vorschlag, und "Zurück zum Plan" stellt ihn jederzeit wieder her.
+const GENERIC = "Zusatzeinheit, die dich stabil macht. Locker bis mittel, nicht bis zur Erschöpfung.";
+function applyEdits(){
+  const E=state.edits||{}; SKIPPED=[];
+  const keep=[];
+  BASE.forEach(b=>{
+    const e=E[b.id];
+    if(!e){ keep.push(b); return; }
+    if(e.skip && b.kind!=="run"){ SKIPPED.push(b); return; }
+    const s={...b}, mon=addDays(START,(s.week-1)*7);
+    if(Number.isInteger(e.off) && e.off>=0 && e.off<=6){ s.date=addDays(mon,e.off); s.day=WD[s.date.getDay()]; }
+    if(s.kind!=="run" && DAYCHOICES.includes(e.label) && e.label!=="Aus" && e.label!==s.label){ s.label=e.label; s.t=e.label; s.d=GENERIC; }
+    if(typeof e.t==="string" && e.t.trim()) s.t=e.t.trim().slice(0,40);
+    if(typeof e.d==="string" && e.d.trim()) s.d=e.d.trim().slice(0,400);
+    if(s.kind==="run" && !s.race && e.min>0 && e.min<=300) s.min=Math.round(e.min);
+    s.edited=true; keep.push(s);
+  });
+  SESSIONS=keep.map((s,i)=>[s,i]).sort((a,b)=>(a[0].week-b[0].week)||(a[0].date-b[0].date)||(a[1]-b[1])).map(x=>x[0]);
   RUNS=SESSIONS.filter(s=>s.kind==="run");
 }
 function weekTitle(w){
@@ -498,6 +526,7 @@ function normalize(x){
       {id:"leg-10k",sport:"lauf",key:"10k",name:"10 km",value:"52:00",date:"",former:true,ts:2}] : []),
     goals: Array.isArray(x.goals) ? x.goals : [],
     workouts: Array.isArray(x.workouts) ? x.workouts : [], dur: x.dur||{},
+    edits: (x.edits && typeof x.edits==="object" && !Array.isArray(x.edits)) ? x.edits : {},
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
@@ -620,8 +649,9 @@ function sessHTML(s, open){
   if(alt) right=`<span class="result">${esc(alt.what)}<br><span class="sess-sub">statt Plan</span></span>`;
   if(log) right=`<span class="result">${fmtKm(log.km)} km<br><span class="sess-sub">${fmtPace(log.sec/log.km)} /km</span></span>`;
   let sub = s.kind==="run" ? (s.race?"21,1 km":s.min+" Min.") : s.kind==="boulder" ? "Ideal, aber optional" : "Kraft & Stabilität";
+  if(s.edited) sub+=" · angepasst";
   if(log){ const ex=[labelOf(SHOES,log.shoe),labelOf(TODS,log.tod)].filter(Boolean); if(ex.length) sub+=" · "+ex.join(" · "); }
-  let body=`<p>${esc(s.d)}</p>`;
+  let body=`<p>${esc(s.d)}</p><button class="linkbtn edit-link" type="button" data-editsess="${s.id}">Einheit anpassen</button>`;
   if(s.kind==="run"){
     const l=log||{};
     body+=`<div class="form" data-form="${s.id}">
@@ -659,14 +689,46 @@ function sessHTML(s, open){
 }
 
 const openIds=new Set(), openPlan=new Set();
+
+/* Frei eingetragene Einheiten (state.workouts) erscheinen in ihrer Woche neben dem Plan */
+function weekWorkouts(w){
+  const ws=addDays(START,(w-1)*7), we=addDays(ws,6);
+  return state.workouts.filter(x=>validKey(x.date)).map(x=>({x,d:fromKey(x.date)})).filter(o=>o.d>=ws&&o.d<=we);
+}
+const freeTitle = x => x.sport==="other" && x.note ? x.note : ovName(x.sport)+(x.note?" · "+x.note:"");
+function freeHTML(o){
+  const x=o.x;
+  return `<div class="sess done"><button class="sess-head" type="button" data-editwo="${esc(x.id)}">
+    <span class="sess-day">${WD[o.d.getDay()]}<small>${fmtDate(o.d)}</small></span>
+    <span><span class="sess-title">${esc(freeTitle(x))}</span><br><span class="sess-sub">Zusätzlich${x.min?" · "+x.min+" Min.":""} · Tippen zum Ändern</span></span>
+    <span class="dot">✓</span></button></div>`;
+}
+function weekHTML(w, autoId){
+  const items=SESSIONS.filter(s=>s.week===w).map(s=>({d:s.date,h:sessHTML(s, openIds.has(s.id)||s.id===autoId)}));
+  weekWorkouts(w).forEach(o=>items.push({d:o.d,h:freeHTML(o)}));
+  items.sort((a,b)=>a.d-b.d);
+  const sk=SKIPPED.filter(s=>s.week===w);
+  const mon=addDays(START,(w-1)*7), dflt=(today>=mon&&today<=addDays(mon,6))?dayKey(today):dayKey(mon);
+  return items.map(i=>i.h).join("")+`<div class="wk-foot"><button class="btn ghost" type="button" data-addwk="${dflt}">+ Einheit hinzufügen</button>${sk.length?`<button class="linkbtn" type="button" data-restore="${w}">${sk.length===1?"1 entfernte Einheit":sk.length+" entfernte Einheiten"} wieder einblenden</button>`:""}</div>`;
+}
+function quickLabels(){
+  const P=state.profile, mine=[P.mon,P.tue,P.fri].filter(x=>DAYCHOICES.includes(x)&&x!=="Aus");
+  return [...new Set([...mine,...DAYCHOICES.filter(c=>c!=="Aus")])];
+}
+function quickHTML(){
+  return `<div class="quick"><label class="lb">Heute gemacht? Ein Tipp trägt es ein.</label>
+    <div class="chips"><button type="button" class="chip" data-quick="Lauf">Lauf</button>${quickLabels().map(l=>`<button type="button" class="chip" data-quick="${esc(l)}">${esc(l)}</button>`).join("")}</div>
+    <p class="hint">Steht es heute im Plan, ist es erledigt. Etwas anderes ersetzt die Einheit von heute. Sonst kommt es zusätzlich dazu.</p></div>`;
+}
 function renderWeek(){
-  const w=currentWeek(), p=PLAN[w-1];
+  const w=currentWeek();
   const list=SESSIONS.filter(s=>s.week===w);
   const next = list.find(s=>s.kind==="run" && !state.logs[s.id] && !state.alt[s.id] && s.date>=today);
   const phase=PHASES.find(ph=>w>=ph.weeks[0]&&w<=ph.weeks[1]);
   $("#thisweek").innerHTML=`
     <div class="sec-head"><h2>Woche ${w}: ${esc(weekTitle(w))}</h2><small>${fmtDate(addDays(START,(w-1)*7))} bis ${fmtDate(addDays(START,(w-1)*7+6))}<br>Phase ${esc(phase.name)}</small></div>
-    ${list.map(s=>sessHTML(s, openIds.has(s.id) || (openIds.size===0 && next && s.id===next.id))).join("")}`;
+    ${quickHTML()}
+    ${weekHTML(w, openIds.size===0&&next?next.id:null)}`;
 }
 
 function renderPlan(){
@@ -676,10 +738,10 @@ function renderPlan(){
     for(let w=ph.weeks[0]; w<=ph.weeks[1]; w++){
       const list=SESSIONS.filter(s=>s.week===w);
       const doneN=list.filter(s=>isDone(s)||state.alt[s.id]).length;
-      const a=list.find(x=>x.day==="Mi"), b=list.find(x=>x.day==="So");
+      const rr=list.filter(x=>x.kind==="run"), a=rr[0], b=rr[1];
       rows+=`<details class="wk ${w===cw?"now":""}" data-week="${w}" ${openPlan.has(w)?"open":""}>
-        <summary><span class="wk-n">W${w}</span><span><b>${esc(weekTitle(w))}</b><br><span class="wk-d">${fmtDate(addDays(START,(w-1)*7))} · Mi ${a.min} Min., So ${b.race?"21,1 km":b.min+" Min."}</span></span><span class="wk-bar" role="img" aria-label="${doneN} von ${list.length} erledigt"><i style="width:${doneN/list.length*100}%"></i></span></summary>
-        ${openPlan.has(w)?list.map(s=>sessHTML(s, openIds.has(s.id))).join(""):""}
+        <summary><span class="wk-n">W${w}</span><span><b>${esc(weekTitle(w))}</b><br><span class="wk-d">${fmtDate(addDays(START,(w-1)*7))} · ${a.day} ${a.min} Min., ${b.day} ${b.race?"21,1 km":b.min+" Min."}</span></span><span class="wk-bar" role="img" aria-label="${doneN} von ${list.length} erledigt"><i style="width:${list.length?doneN/list.length*100:0}%"></i></span></summary>
+        ${openPlan.has(w)?weekHTML(w):""}
       </details>`;
     }
     return `<div class="phase"><h3>${esc(ph.name)}</h3><p>Woche ${ph.weeks[0]}–${ph.weeks[1]}. ${esc(ph.text)}</p>${rows}</div>`;
@@ -912,11 +974,13 @@ function render(){
 }
 
 /* ---------- Toast & praise ---------- */
-let toastTimer;
-function toast(title, text){
-  const t=$("#toast"); t.innerHTML=`<b>${esc(title)}</b>${esc(text)}`;
+let toastTimer, undoSnap=null;
+function toast(title, text, undo){
+  const t=$("#toast"); undoSnap=undo||null;
+  t.innerHTML=`<b>${esc(title)}</b>${esc(text)}${undo?`<button type="button" class="toast-undo" data-undo>Rückgängig</button>`:""}`;
+  t.classList.toggle("undo",!!undo);
   t.classList.add("show"); clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove("show"),4800);
+  toastTimer=setTimeout(()=>{ t.classList.remove("show"); t.classList.remove("undo"); },undo?8000:4800);
 }
 function praise(id, entry){
   const pace=entry.sec/entry.km, others=loggedRuns().filter(r=>r.id!==id);
@@ -1020,7 +1084,7 @@ document.addEventListener("click", e=>{
 $("#phases").addEventListener("toggle", e=>{
   const d=e.target; if(!d.matches||!d.matches("details.wk")) return;
   const w=+d.dataset.week;
-  if(d.open){ openPlan.add(w); if(!d.querySelector(".sess")) d.insertAdjacentHTML("beforeend", SESSIONS.filter(s=>s.week===w).map(s=>sessHTML(s, openIds.has(s.id))).join("")); }
+  if(d.open){ openPlan.add(w); if(!d.querySelector(".sess")) d.insertAdjacentHTML("beforeend", weekHTML(w)); }
   else openPlan.delete(w);
 }, true);
 
@@ -1173,8 +1237,8 @@ function renderOverview(){
     <div class="actions" style="margin-top:14px"><button class="btn ghost" type="button" data-addwo>+ Einheit eintragen</button></div>
     <p class="hint">Läufe trägst du im Tab Training ein. Alle Einträge zählen am geplanten Tag.</p>`;
 }
-function workoutSheet(w){
-  const x=w||{sport:(ovSport!=="all"&&ovSport!=="lauf")?ovSport:"boulder",date:dayKey(today),min:"",note:""};
+function workoutSheet(w, dk){
+  const x=w||{sport:(ovSport!=="all"&&ovSport!=="lauf")?ovSport:"boulder",date:dk||dayKey(today),min:"",note:""};
   openSheet(`<h3>${w?"Einheit bearbeiten":"Einheit eintragen"}</h3><p class="hint">Bouldern, Kraft, Calisthenics, Stretching und mehr. Läufe trägst du im Tab Training ein.</p>
     <div class="chips" id="wSport">${OVS.filter(o=>o[0]!=="lauf").map(([k,n])=>`<button type="button" class="chip" data-ws="${k}" aria-pressed="${x.sport===k}">${n}</button>`).join("")}</div>
     <label class="lb" for="wDate" style="margin-top:14px">Datum</label><input class="inp" id="wDate" type="date" value="${esc(x.date)}">
@@ -1192,9 +1256,9 @@ function workoutSheet(w){
     if(w) Object.assign(w,data); else state.workouts.push({id:uid(),...data,ts:Date.now()});
     ovSport=sp;
     const idx=Math.round((weekStart(fromKey(date))-weekStart(today))/DAY/7)+11; if(idx>=0&&idx<=11) ovSel=idx;
-    persist(); closeSheet(); renderOverview(); toast("Gespeichert.",ovName(sp)+" ist in deiner Übersicht.");
+    persist(); closeSheet(); render(); toast("Gespeichert.",ovName(sp)+" ist in deiner Übersicht.");
   };
-  const del=$("#wDel"); if(del) del.onclick=()=>{ if(!confirm("Diese Einheit löschen?")) return; state.workouts=state.workouts.filter(y=>y!==w); persist(); closeSheet(); renderOverview(); };
+  const del=$("#wDel"); if(del) del.onclick=()=>{ if(!confirm("Diese Einheit löschen?")) return; state.workouts=state.workouts.filter(y=>y!==w); persist(); closeSheet(); render(); };
 }
 document.addEventListener("click", e=>{
   const t=e.target;
@@ -1204,6 +1268,123 @@ document.addEventListener("click", e=>{
   if(t.closest("[data-ovnext]")){ ovSel=Math.min(11,ovSel+1); renderOverview(); return; }
   if(t.closest("[data-addwo]")){ workoutSheet(null); return; }
   const ew=t.closest("[data-editwo]"); if(ew){ const w=state.workouts.find(x=>x.id===ew.dataset.editwo); if(w) workoutSheet(w); return; }
+});
+/* ---------- Schnell erfassen & Einheiten anpassen ---------- */
+const snapshot = () => JSON.stringify({strength:state.strength,alt:state.alt,edits:state.edits,workouts:state.workouts,dur:state.dur});
+function restoreSnapshot(snap){
+  try{ Object.assign(state, JSON.parse(snap)); }catch(e){ return; }
+  applyProfile(); persist(); render();
+}
+// Ein Tipp: erledigt die geplante Einheit, ersetzt die von heute oder legt eine zusätzliche an.
+function quickRecord(label){
+  const w=currentWeek(), mon=addDays(START,(w-1)*7), off=Math.round((today-mon)/DAY), inWk=off>=0&&off<=6;
+  if(label==="Lauf"){
+    const open=SESSIONS.filter(s=>s.week===w&&s.kind==="run"&&!state.logs[s.id]).sort((a,b)=>Math.abs(a.date-today)-Math.abs(b.date-today));
+    if(!open.length){ toast("Alle Läufe dieser Woche sind eingetragen.","Zum Ändern einen Lauf antippen."); return; }
+    openIds.add(open[0].id); render();
+    const el=document.querySelector(`#thisweek [data-toggle="${open[0].id}"]`); if(el) el.scrollIntoView({block:"center",behavior:"smooth"});
+    toast("Lauf eintragen.","Kilometer und Zeit unten eintragen, dann speichern.");
+    return;
+  }
+  const snap=snapshot();
+  const open=inWk?SESSIONS.filter(s=>s.week===w&&s.kind!=="run"&&!state.strength[s.id]):[];
+  const sameDay=s=>s.date.getTime()===today.getTime();
+  const todays=open.filter(sameDay);
+  const plannedToday=todays.find(s=>s.label===label);
+  const elsewhere=open.filter(s=>s.label===label&&!sameDay(s)).sort((a,b)=>Math.abs(a.date-today)-Math.abs(b.date-today))[0];
+  let msg;
+  if(plannedToday){
+    delete state.alt[plannedToday.id]; state.strength[plannedToday.id]=true;
+    msg=[label+" erledigt.","Wie geplant. Die Einheit von heute ist abgehakt."];
+  } else if(todays.length){
+    const p=todays[0];
+    state.alt[p.id]={what:label,ts:Date.now()};
+    msg=[label+" eingetragen.",`Ersetzt „${p.t}“ von heute.`];
+  } else if(elsewhere){
+    delete state.alt[elsewhere.id]; state.strength[elsewhere.id]=true;
+    const e=state.edits[elsewhere.id]||(state.edits[elsewhere.id]={}); e.off=off;
+    applyProfile();
+    msg=[label+" erledigt.",`Die geplante Einheit (${WDL[elsewhere.date.getDay()]}) liegt jetzt auf heute.`];
+  } else {
+    const sp=sportOfLabel(label)||"other";
+    state.workouts.push({id:uid(),sport:sp,date:dayKey(today),min:0,note:sp==="other"?label:"",ts:Date.now()});
+    msg=[label+" eingetragen.","Als zusätzliche Einheit gespeichert."];
+  }
+  persist(); render(); toast(msg[0],msg[1],snap);
+}
+function editSheet(id){
+  const s=SESSIONS.find(x=>x.id===id), b=BASE.find(x=>x.id===id); if(!s||!b) return;
+  const run=s.kind==="run", mon=addDays(START,(s.week-1)*7);
+  const baseOff=Math.round((b.date-mon)/DAY), nowOff=Math.round((s.date-mon)/DAY);
+  const dfl=lb=>lb===b.label?{t:b.t,d:b.d}:{t:lb,d:GENERIC};
+  let cur=run?null:s.label;
+  openSheet(`<h3>Einheit anpassen</h3><p class="hint">Woche ${s.week}. Der Plan ist ein Vorschlag, du entscheidest.</p>
+    ${run?"":`<label class="lb">Art</label><div class="chips" id="eLabel">${DAYCHOICES.filter(c=>c!=="Aus").map(c=>`<button type="button" class="chip" data-el="${c}" aria-pressed="${s.label===c}">${c}</button>`).join("")}</div>`}
+    <label class="lb" for="eT" style="margin-top:14px">Titel</label><input class="inp" id="eT" type="text" maxlength="40" value="${esc(s.t)}">
+    <label class="lb" for="eD" style="margin-top:14px">Beschreibung</label><textarea class="inp" id="eD" maxlength="400">${esc(s.d)}</textarea>
+    ${run&&!s.race?`<label class="lb" for="eM" style="margin-top:14px">Geplante Dauer in Minuten</label><input class="inp" id="eM" type="text" inputmode="numeric" value="${s.min}">`:""}
+    ${run?"":`<label class="lb" for="eDur" style="margin-top:14px">Dauer in Minuten (optional)</label><input class="inp" id="eDur" type="text" inputmode="numeric" value="${state.dur[id]||""}" placeholder="z. B. 90">`}
+    <label class="lb" style="margin-top:14px">Tag</label>
+    <div class="chips" id="eDay">${[0,1,2,3,4,5,6].map(i=>`<button type="button" class="chip" data-ed="${i}" aria-pressed="${i===nowOff}">${WD[(i+1)%7]}</button>`).join("")}</div>
+    <p class="err" id="eErr"></p>
+    <div class="actions"><button class="btn" type="button" id="eSave">Speichern</button>${state.edits[id]?`<button class="btn ghost" type="button" id="eReset">Zurück zum Plan</button>`:""}<button class="btn ghost" type="button" data-close>Abbrechen</button></div>
+    ${run?"":`<button class="linkbtn" type="button" id="eSkip" style="margin-top:20px">Aus diesem Plan entfernen</button>`}`, "#eT");
+  pickChip($("#eDay"),"data-ed");
+  const lab=$("#eLabel");
+  if(lab){
+    pickChip(lab,"data-el");
+    lab.addEventListener("click", ev=>{
+      const bt=ev.target.closest("[data-el]"); if(!bt) return;
+      const prev=dfl(cur), nx=dfl(bt.dataset.el);
+      if($("#eT").value.trim()===prev.t) $("#eT").value=nx.t;
+      if($("#eD").value.trim()===prev.d) $("#eD").value=nx.d;
+      cur=bt.dataset.el;
+    });
+  }
+  $("#eSave").onclick=()=>{
+    const t=$("#eT").value.trim(), d=$("#eD").value.trim(), er=$("#eErr");
+    if(!t){ er.textContent="Der Titel darf nicht leer sein."; return; }
+    const df=run?{t:b.t,d:b.d}:dfl(cur), ne={};
+    if(!run && cur!==b.label) ne.label=cur;
+    if(t!==df.t) ne.t=t;
+    if(d && d!==df.d) ne.d=d;
+    if(run && !s.race){
+      const m=parseInt($("#eM").value,10);
+      if(!(m>0&&m<=300)){ er.textContent="Die Dauer muss zwischen 1 und 300 Minuten liegen."; return; }
+      if(m!==b.min) ne.min=m;
+    }
+    if(!run){
+      const raw=$("#eDur").value.trim(), n=parseInt(raw,10);
+      if(raw && !(n>0&&n<=600)){ er.textContent="Die Dauer muss zwischen 1 und 600 Minuten liegen."; return; }
+      if(n>0) state.dur[id]=n; else delete state.dur[id];
+    }
+    const off=+$("#eDay").querySelector('[aria-pressed="true"]').dataset.ed;
+    if(off!==baseOff) ne.off=off;
+    if(Object.keys(ne).length) state.edits[id]=ne; else delete state.edits[id];
+    applyProfile(); persist(); closeSheet(); render();
+    toast("Gespeichert.","Einheit angepasst. „Zurück zum Plan“ stellt den Vorschlag wieder her.");
+  };
+  const rs=$("#eReset"); if(rs) rs.onclick=()=>{ delete state.edits[id]; applyProfile(); persist(); closeSheet(); render(); toast("Zurück zum Plan.","Die Einheit steht wieder so da, wie sie geplant war."); };
+  const sk=$("#eSkip"); if(sk) sk.onclick=()=>{
+    if(!confirm("Diese Einheit aus dem Plan entfernen? Du kannst sie in der Woche wieder einblenden.")) return;
+    state.edits[id]={...(state.edits[id]||{}),skip:true}; applyProfile(); persist(); closeSheet(); render();
+  };
+}
+document.addEventListener("click", e=>{
+  const t=e.target;
+  const q=t.closest("[data-quick]"); if(q){ quickRecord(q.dataset.quick); return; }
+  const es=t.closest("[data-editsess]"); if(es){ editSheet(es.dataset.editsess); return; }
+  const aw=t.closest("[data-addwk]"); if(aw){ workoutSheet(null, aw.dataset.addwk); return; }
+  const rs=t.closest("[data-restore]");
+  if(rs){
+    const w=+rs.dataset.restore;
+    SKIPPED.filter(s=>s.week===w).forEach(s=>{ const ed=state.edits[s.id]; if(!ed) return; delete ed.skip; if(!Object.keys(ed).length) delete state.edits[s.id]; });
+    applyProfile(); persist(); render(); return;
+  }
+  if(t.closest("[data-undo]")){
+    if(undoSnap){ const sn=undoSnap; undoSnap=null; restoreSnapshot(sn); const tt=$("#toast"); tt.classList.remove("show","undo"); toast("Rückgängig gemacht.","Alles steht wieder wie vorher."); }
+    return;
+  }
 });
 document.addEventListener("change", e=>{
   const t=e.target; if(!t.id||t.id.indexOf("dur-")!==0) return;

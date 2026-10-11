@@ -9,6 +9,9 @@ Eine schlanke, schwarz-weiße Android-App für das Training zum Halbmarathon am 
 - Dazu Krafttraining und bis zu 2 Bouldern-Einheiten, mit festem Wochenrhythmus
 - Pro Lauf: Kilometer, Zeit, Gefühl, Knie-Status, Schuhtyp (Barfußschuhe oder normal) und Tageszeit
 - Alternativen eintragen, wenn etwas anderes stattfand, zum Beispiel Sauna oder Ruhetag
+- **Schnell erfassen:** Über den Antippen-Chips (Lauf, Kraft, Bouldern, Yoga …) trägst du eine Einheit mit einem Tipp ein. Steht sie heute im Plan, ist sie erledigt. Steht heute etwas anderes im Plan, ersetzt die neue Einheit sie. Steht sie an einem anderen Tag der Woche im Plan, rutscht sie auf heute. Sonst kommt sie als Zusatzeinheit dazu. „Rückgängig“ im Hinweis nimmt es zurück. Beim Lauf öffnet der Tipp das Formular, weil Kilometer und Zeit fehlen
+- **Jede Einheit anpassen:** Unter „Einheit anpassen“ änderst du Art, Titel, Beschreibung, Dauer und Wochentag. Der Plan bleibt der Vorschlag: „Zurück zum Plan“ stellt ihn wieder her. Zusatzeinheiten (Kraft, Bouldern …) lassen sich aus der Woche entfernen und wieder einblenden, Läufe bleiben im Plan
+- Zusätzliche Einheiten stehen in ihrer Woche neben dem Plan und lassen sich dort antippen und ändern
 - Fortschrittsbalken vom längsten Lauf bis zu 21,1 km
 
 **Einstellungen** (Symbol oben rechts)
@@ -102,7 +105,7 @@ Regeln:
 - Gib die vollständige, geänderte index.html zurück, nicht nur Ausschnitte.
 - Gespeicherte Daten müssen kompatibel bleiben. Der Speicherschlüssel
   "hm2027-state" und die vorhandenen Felder (logs, strength, alt, habits,
-  habitLog, learnings, profile, records, goals, workouts, dur, updatedAt) dürfen nicht umbenannt oder entfernt
+  habitLog, learnings, profile, records, goals, workouts, dur, edits, updatedAt) dürfen nicht umbenannt oder entfernt
   werden. Neue Felder sind optional und brauchen Standardwerte.
 - Die Skript-IDs "saved-data" und "app" und die Backup-Funktion bleiben
   erhalten. Das Skript "saved-data" bleibt im Original leer (null).
@@ -141,11 +144,14 @@ state = {
   goals:      [ { id, sport: "allg"|"lauf"|..., text, due, done, ts } ],
   workouts:   [ { id, sport: "boulder"|"kraft"|"cali"|"stretch"|"other", date, min, note, ts } ],
   dur:        { "w3-tue": 75 },   // optionale Dauer in Minuten für Plan-Einheiten
+  edits:      { "w3-wed": { t, d, min, off, label, skip } },   // eigene Anpassungen am Plan, nur geänderte Felder
   updatedAt:  <Zeitstempel>
 }
 ```
 
-Die Schlüssel von `logs`, `strength` und `alt` sind Einheiten-IDs: `w` plus Wochennummer, dann `-mon`, `-tue`, `-wed`, `-fri` oder `-sun`.
+Die Schlüssel von `logs`, `strength`, `alt`, `dur` und `edits` sind Einheiten-IDs: `w` plus Wochennummer, dann `-mon`, `-tue`, `-wed`, `-fri` oder `-sun`.
+
+`edits` liegt über dem Plan und ändert ihn nicht: `t` Titel, `d` Beschreibung, `min` geplante Minuten (nur Läufe), `off` Wochentag als Abstand zum Montag (0 bis 6), `label` andere Art (nur Zusatzeinheiten), `skip` aus dem Plan entfernt. Nur geänderte Felder werden gespeichert, damit zum Beispiel die Zielpace in Beschreibungen weiter mitwandert.
 
 ### 4. Testen, bevor du veröffentlichst
 
