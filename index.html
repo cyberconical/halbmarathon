@@ -546,36 +546,10 @@ try{
 const saveLocal=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} };
 saveLocal();
 
-let db=null, writing=false, pending=false;
-const syncEl=$("#sync");
-async function pushDb(){
-  if(!db) return;
-  if(writing){ pending=true; return; }
-  writing=true;
-  try{ await db.doc("tracker/state").set(JSON.parse(JSON.stringify(state))); syncEl.textContent="Gespeichert & synchronisiert"; }
-  catch(e){ syncEl.textContent="Nur auf diesem Gerät gespeichert"; }
-  writing=false;
-  if(pending){ pending=false; pushDb(); }
-}
 const saveBtn=$("#saveBtn");
 function setDirty(d){ saveBtn.classList.toggle("dirty",d); saveBtn.textContent=d?"Backup speichern":"Alles gespeichert"; }
-function persist(){ state.updatedAt=Date.now(); saveLocal(); pushDb(); setDirty(true); }
+function persist(){ state.updatedAt=Date.now(); saveLocal(); setDirty(true); }
 
-if(window.claude && typeof window.claude.use==="function"){
-  window.claude.use("db").then(async d=>{
-    if(!d) return;
-    db=d;
-    try{
-      const snap=await d.doc("tracker/state").get();
-      if(snap.exists){
-        const data=JSON.parse(JSON.stringify(snap.data()));
-        if(data && (data.updatedAt||0) >= state.updatedAt){ state=normalize(data); saveLocal(); render(); }
-        else pushDb();
-      } else pushDb();
-      syncEl.textContent="Gespeichert & synchronisiert";
-    }catch(e){}
-  }).catch(()=>{});
-}
 // Android & Co.: Speicher dauerhaft anfordern, damit der Browser nichts löscht
 if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
 
@@ -1120,16 +1094,8 @@ function buildFile(){
   return PRISTINE.replace(/(<script id="saved-data" type="application\/json">)[\s\S]*?(<\/script>)/, (m,a,b)=>a+json+b);
 }
 saveBtn.addEventListener("click", async ()=>{
-  saveLocal(); pushDb();
+  saveLocal();
   const html=buildFile(), filename="halbmarathon.html";
-  let dl=null;
-  if(window.claude && typeof window.claude.use==="function"){ try{ dl=await window.claude.use("downloads"); }catch(e){} }
-  if(dl){
-    try{ await dl.save({filename, data:html}); setDirty(false); toast("Gespeichert.","Die Datei enthält alle deine Einträge."); }
-    catch(e){ if(e && e.code==="declined") return; setDirty(false); toast("Online gespeichert.","Deine Einträge sind sicher."); }
-    return;
-  }
-  if(window.claude){ setDirty(false); toast("Gespeichert.","Deine Einträge sind online gesichert."); return; }
   const cap=window.Capacitor;
   if(cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Filesystem && cap.Plugins.Share){
     try{
