@@ -47,6 +47,9 @@ public class RunTrackerService extends Service implements LocationListener {
     static volatile long startedAt = 0;
     static volatile String cuesJson = "[]";
     static volatile String meta = "";
+    // Kleiner Zustand der Oberfläche (Pausen, Runden), damit sie nach einem Neustart wieder anknüpfen kann.
+    // Enthält keine Orte und liegt wie die Messpunkte nur im Arbeitsspeicher.
+    static volatile String appState = "";
     static volatile RunTrackerService instance = null;
 
     private static class Cue {
@@ -72,6 +75,7 @@ public class RunTrackerService extends Service implements LocationListener {
         cuesJson = cues == null ? "[]" : cues;
         meta = metaData == null ? "" : metaData;
         startedAt = System.currentTimeMillis();
+        appState = "";
         paused = false;
         gpsOn = true;
         running = true;
@@ -120,14 +124,54 @@ public class RunTrackerService extends Service implements LocationListener {
     }
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        RunLog.init(this);
+        RunLog.installCrashHandler();
+        RunLog.add("svc:create");
+    }
+
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        RunLog.add("svc:cmd running=" + (running ? 1 : 0) + (intent == null ? " nullIntent" : ""));
         // Wurde der Prozess beendet, gibt es nichts mehr aufzuzeichnen. Dann nicht neu starten.
         if (intent == null || !running) {
+            leaveQuickly();
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (instance == null) startTracking();
+        if (instance == null) {
+            try {
+                startTracking();
+            } catch (Throwable t) {
+                // Ein Fehler beim Einrichten darf die App nie mitreißen.
+                RunLog.add("svc:start-error " + RunLog.describe(t));
+                fail();
+            }
+        }
         return START_NOT_STICKY;
+    }
+
+    /**
+     * Wer startForegroundService() aufruft, muss kurz darauf startForeground() aufrufen, sonst beendet
+     * Android die App. Das gilt auch, wenn der Dienst gleich wieder endet.
+     */
+    private void leaveQuickly() {
+        try {
+            createChannel();
+            Notification n = buildNotification();
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            } else {
+                startForeground(NOTIFICATION_ID, n);
+            }
+            if (Build.VERSION.SDK_INT >= 24) {
+                stopForeground(Service.STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private void startTracking() {
@@ -146,28 +190,40 @@ public class RunTrackerService extends Service implements LocationListener {
                 startForeground(NOTIFICATION_ID, n);
             }
         } catch (Exception e) {
+            RunLog.add("svc:fg fail " + RunLog.describe(e));
             fail();
             return;
         }
+        RunLog.add("svc:fg ok cues=" + cues.size());
         try {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this, Looper.getMainLooper());
             gpsOn = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            RunLog.add("svc:gps ok enabled=" + (gpsOn ? 1 : 0));
         } catch (SecurityException | IllegalArgumentException e) {
+            RunLog.add("svc:gps fail " + RunLog.describe(e));
             fail();
             return;
         }
         // Nur bei Intervallen mit Signalen muss die CPU wach bleiben, damit die Zeitpunkte stimmen.
+        // Klappt das nicht, läuft die Aufzeichnung trotzdem weiter, nur die Signale können sich verspäten.
         if (!cues.isEmpty()) {
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (pm != null) {
-                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "halbmarathon:lauf");
-                wakeLock.acquire(4 * 60 * 60 * 1000L);
+            try {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null) {
+                    wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "halbmarathon:lauf");
+                    wakeLock.acquire(4 * 60 * 60 * 1000L);
+                    RunLog.add("svc:wakelock ok");
+                }
+            } catch (Throwable t) {
+                wakeLock = null;
+                RunLog.add("svc:wakelock fail " + RunLog.describe(t));
             }
         }
         scheduleCues();
     }
 
     private void fail() {
+        RunLog.add("svc:fail");
         running = false;
         instance = null;
         stopSelf();
@@ -178,6 +234,7 @@ public class RunTrackerService extends Service implements LocationListener {
         activeBaseMs += SystemClock.elapsedRealtime() - lastResumeRt;
         paused = true;
         cancelCues();
+        RunLog.add("svc:pause");
     }
 
     private void resumeTracking() {
@@ -185,9 +242,11 @@ public class RunTrackerService extends Service implements LocationListener {
         paused = false;
         lastResumeRt = SystemClock.elapsedRealtime();
         scheduleCues();
+        RunLog.add("svc:resume");
     }
 
     private void stopTracking() {
+        RunLog.add("svc:stop fixes=" + fixCount());
         cancelCues();
         releaseResources();
         running = false;
@@ -218,12 +277,39 @@ public class RunTrackerService extends Service implements LocationListener {
 
     @Override
     public void onDestroy() {
+        // Steht "running" hier noch auf 1, hat das System den Dienst beendet und nicht die Person.
+        RunLog.add("svc:destroy running=" + (running ? 1 : 0) + " fixes=" + fixCount());
         if (handler != null) cancelCues();
         releaseResources();
         running = false;
         paused = false;
         instance = null;
         super.onDestroy();
+    }
+
+    /** Die Person hat die App aus der Übersicht gewischt. Die Aufzeichnung läuft weiter. */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        RunLog.add("svc:taskRemoved");
+        super.onTaskRemoved(rootIntent);
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        RunLog.add("svc:trim level=" + level);
+        super.onTrimMemory(level);
+    }
+
+    @Override
+    public void onLowMemory() {
+        RunLog.add("svc:lowMemory");
+        super.onLowMemory();
+    }
+
+    private static int fixCount() {
+        synchronized (LOCK) {
+            return FIXES.size();
+        }
     }
 
     private long activeNowMs() {
@@ -334,9 +420,15 @@ public class RunTrackerService extends Service implements LocationListener {
             l.hasAccuracy() ? l.getAccuracy() : -1,
             l.hasSpeed() ? l.getSpeed() : -1
         };
+        int n;
         synchronized (LOCK) {
             if (FIXES.size() < MAX_FIXES) FIXES.add(f);
+            n = FIXES.size();
         }
+        // Ins Protokoll kommen nur Zähler und Wartezeiten, nie die Messwerte selbst.
+        if (n == 1) RunLog.add("fix:first after=" + ((System.currentTimeMillis() - startedAt) / 1000) + "s");
+        else if (n % 500 == 0) RunLog.add("fix:n=" + n);
+        if (!gpsOn) RunLog.add("gps:back");
         gpsOn = true;
     }
 
@@ -347,7 +439,10 @@ public class RunTrackerService extends Service implements LocationListener {
 
     @Override
     public void onProviderDisabled(String provider) {
-        if (LocationManager.GPS_PROVIDER.equals(provider)) gpsOn = false;
+        if (LocationManager.GPS_PROVIDER.equals(provider)) {
+            if (gpsOn) RunLog.add("gps:off");
+            gpsOn = false;
+        }
     }
 
     @Override

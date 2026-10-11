@@ -121,6 +121,7 @@ textarea.inp{ font-size:16px; font-weight:400; resize:vertical; min-height:84px;
 .runbar{ position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom,0px) + 52px); z-index:6; padding:12px 20px; border:0; border-top:2px solid var(--fg); background:var(--fg); color:var(--bg); font-weight:700; text-align:left; cursor:pointer; }
 .runui{ position:fixed; inset:0; z-index:40; background:var(--bg); color:var(--fg); overflow:auto; display:flex; flex-direction:column; padding:calc(env(safe-area-inset-top,0px) + 16px) 20px calc(env(safe-area-inset-bottom,0px) + 20px); max-width:720px; margin:0 auto; }
 .runui.work{ filter:invert(1); }
+.diag{ margin:12px 0 0; padding:10px 12px; border:2px solid var(--line); font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre-wrap; word-break:break-word; max-height:260px; overflow:auto; }
 .run-top{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
 .run-tag{ font-size:14px; font-weight:700; border:2px solid var(--fg); padding:3px 10px; border-radius:999px; }
 .run-label{ font-size:clamp(34px,11vw,60px); font-weight:900; font-stretch:62%; line-height:1; }
@@ -1253,7 +1254,9 @@ const nativeTracker = () => {
   try{ if(C.isNativePlatform && !C.isNativePlatform()) return null;
        return (C.Plugins && C.Plugins.RunTracker) || (C.registerPlugin ? C.registerPlugin("RunTracker") : null); }catch(e){ return null; }
 };
-let trk=null, pend=lsGet(PEND_KEY), trkTimer=null, trkView="", trkLast=null;
+// Anonymes Diagnose-Protokoll: nur feste Ereigniswörter und kleine Zähler, nie Orte, Zeiten oder Namen.
+const hmlog = e => { try{ const P=nativeTracker(); if(P && P.diagLog) P.diagLog({e:String(e)}).catch(()=>{}); }catch(x){} };
+let trk=null, pend=lsGet(PEND_KEY), trkTimer=null, trkView="", trkLast=null, diagOn=true;
 const runUI=$("#runUI"), runBar=$("#runBar");
 const mmss = s => { s=Math.max(0,Math.round(s)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
 const hhmmss = s => { s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600); return (h?h+":":"")+String(Math.floor(s%3600/60)).padStart(h?2:1,"0")+":"+String(s%60).padStart(2,"0"); };
@@ -1264,7 +1267,13 @@ const GPS_ERR = {
   NOGEO:"Dieses Gerät oder dieser Browser liefert keinen Standort.",
   DENIED:"Der Standort wurde nicht erlaubt. Erlaube ihn in den Einstellungen des Browsers."
 };
-function trkSave(){ lsSet(TRK_KEY, trk?{id:trk.id,startedAt:trk.startedAt,pauses:trk.pauses,laps:trk.laps,native:trk.native}:null); }
+// Der Zustand liegt doppelt: im Speicher der App und im Dienst. Stirbt nur die Oberfläche, knüpft sie über den Dienst wieder an.
+function trkSave(){
+  const s=trk?{id:trk.id,startedAt:trk.startedAt,pauses:trk.pauses,laps:trk.laps,native:trk.native}:null;
+  lsSet(TRK_KEY, s);
+  const P=s&&s.native?nativeTracker():null;
+  if(P){ try{ P.saveState({state:JSON.stringify(s)}).catch(()=>{}); }catch(e){} }
+}
 function newTrk(id, startedAt, native, extra){
   const s=SESSIONS.find(x=>x.id===id);
   trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt), cue:-1, segs: s?HMTrk.parseSegments(s.d,s.min):[]}, extra||{});
@@ -1275,7 +1284,12 @@ function newTrk(id, startedAt, native, extra){
 async function trkBegin(id){
   const s=SESSIONS.find(x=>x.id===id); if(!s || trk) return;
   const P=nativeTracker(), segs=HMTrk.parseSegments(s.d,s.min), cues=HMTrk.cuesFor(segs);
-  const fail=code=>{ const m=$("#rMsg"); if(m) m.textContent=GPS_ERR[code]||"Die Aufzeichnung konnte nicht gestartet werden."; };
+  const fail=code=>{
+    hmlog("begin:fail "+(code||"unknown"));
+    const m=$("#rMsg"); if(m) m.textContent=GPS_ERR[code]||"Die Aufzeichnung konnte nicht gestartet werden.";
+    if(code==="RUNNING") trkRestore();   // Der Dienst läuft schon, also dort wieder anknüpfen.
+  };
+  hmlog("begin segs="+segs.length+" cues="+cues.length);
   try{
     if(P){
       let ps=await P.checkPermissions();
@@ -1284,6 +1298,7 @@ async function trkBegin(id){
       if(ps.notifications && ps.notifications!=="granted"){ try{ await P.requestPermissions({permissions:["notifications"]}); }catch(e){} }
       const r=await P.start({cues:JSON.stringify(cues), meta:id});
       newTrk(id, r.startedAt||Date.now(), true);
+      hmlog("begin:ok");
     } else {
       if(!navigator.geolocation){ fail("NOGEO"); return; }
       newTrk(id, Date.now(), false);
@@ -1339,6 +1354,7 @@ function trkLap(){ if(trk && !trk.paused){ trk.laps.push(Math.round(trk.an.activ
 async function trkEnd(){
   if(!trk) return;
   const me=trk, now=Date.now(); me.ending=true; clearInterval(trkTimer);
+  hmlog("end fixes="+me.fixes.length+" dead="+(me.dead?1:0));
   const p=me.pauses[me.pauses.length-1]; if(p && p.to==null) p.to=now;
   const P=me.native&&nativeTracker();
   if(P){
@@ -1371,18 +1387,62 @@ function trkAccept(){
   if(s){ if(tab!=="training") showTab("training",false); render(); const el=document.querySelector(`[data-toggle="${id}"]`); if(el) el.scrollIntoView({block:"center"}); }
 }
 
-/* Wieder anknüpfen, wenn die App im Hintergrund beendet wurde, der Dienst aber weiterläuft */
-async function trkRestore(){
+/* Wieder anknüpfen, wenn die App im Hintergrund beendet wurde, der Dienst aber weiterläuft.
+   Regeln: Läuft der Dienst, knüpft die App immer an und zeigt den Lauf sofort. Gelöscht wird der gemerkte
+   Lauf nur, wenn der Dienst sicher nicht mehr läuft. Ein Fehler beim Nachfragen löscht nichts, er wird wiederholt. */
+async function trkRestore(attempt){
+  attempt=attempt||0;
   const saved=lsGet(TRK_KEY), P=nativeTracker();
-  if(!saved || !P){ if(saved) lsSet(TRK_KEY,null); return; }
+  if(!P){ if(saved) lsSet(TRK_KEY,null); return; }
+  let st;
+  try{ st=await P.getStatus(); }
+  catch(e){
+    hmlog("restore:status-error try="+attempt);
+    if(attempt<5) setTimeout(()=>trkRestore(attempt+1), 500*(attempt+1));
+    return;
+  }
+  if(!st.running){
+    if(saved){
+      lsSet(TRK_KEY,null);
+      hmlog("restore:service-gone");
+      toast("Die Aufzeichnung wurde beendet.","Android hat die App im Hintergrund geschlossen, die Messpunkte sind verloren. Unter Einstellungen, Diagnose steht, was passiert ist.");
+    }
+    return;
+  }
+  if(trk) return;                                           // schon angeknüpft
+  let snap=null; try{ snap=JSON.parse(st.state||"null"); }catch(e){}
+  snap=snap||saved||{};
+  const id=snap.id||st.meta||"", pauses=Array.isArray(snap.pauses)?snap.pauses:[], now=Date.now();
+  const open=pauses.length&&pauses[pauses.length-1].to==null;
+  if(st.paused && !open) pauses.push({from:now,to:null});   // Dienst pausiert, Oberfläche wusste es nicht
+  if(!st.paused && open) pauses[pauses.length-1].to=now;    // umgekehrt
+  newTrk(id, st.startedAt||snap.startedAt||now, true, {pauses, laps:Array.isArray(snap.laps)?snap.laps:[], paused:!!st.paused});
+  hmlog("restore:attached fixes="+(st.count||0)+" paused="+(st.paused?1:0)+" plan="+(SESSIONS.find(x=>x.id===id)?1:0));
+  runUI.dataset.id=id;
+  showRun("live"); trkTick();
+}
+
+/* ---------- Diagnose-Protokoll (anonym, nur auf dem Gerät) ---------- */
+// Das Protokoll führt der Dienst. Es enthält Ereignisse wie „Dienst gestartet“ oder den Grund, warum Android
+// die App zuletzt beendet hat, aber keine Orte, Strecken, Datumsangaben, Namen oder Gerätekennungen.
+async function diagLoad(){
+  const P=nativeTracker(); if(!P || !P.getLog) return null;
+  try{ const r=await P.getLog(); diagOn=r.enabled!==false; return r.text||""; }catch(e){ return null; }
+}
+async function diagShow(){
+  const box=$("#diagText"); if(!box) return;
+  const txt=await diagLoad();
+  box.hidden=false;
+  box.textContent = txt==null ? "Das Protokoll gibt es nur in der Android-App." : (txt.trim()||"Noch keine Einträge.");
+}
+async function diagShare(){
+  const txt=await diagLoad(), cap=window.Capacitor;
+  if(!txt || !txt.trim()){ toast("Nichts zu teilen.","Das Protokoll ist leer."); return; }
+  const body="Halbmarathon, anonymes Diagnose-Protokoll\n(keine Orte, keine Datumsangaben, keine Namen; Zeit = Sekunden seit Prozessstart)\n\n"+txt;
   try{
-    const st=await P.getStatus();
-    if(!st.running){ lsSet(TRK_KEY,null); return; }
-    const id=saved.id||st.meta;
-    if(!SESSIONS.find(x=>x.id===id)){ try{ await P.stop(); }catch(e){} lsSet(TRK_KEY,null); return; }
-    newTrk(id, st.startedAt||saved.startedAt, true, {pauses:saved.pauses||[], laps:saved.laps||[], paused:!!st.paused});
-    updateRunBar(); trkTick();
-  }catch(e){ lsSet(TRK_KEY,null); }
+    const f=await cap.Plugins.Filesystem.writeFile({path:"halbmarathon-diagnose.txt", data:body, directory:"CACHE", encoding:"utf8"});
+    await cap.Plugins.Share.share({title:"Halbmarathon Diagnose", url:f.uri, dialogTitle:"Diagnose teilen"});
+  }catch(e){ if(!/cancel/i.test(String((e&&e.message)||e))) toast("Das hat nicht geklappt.","Das Protokoll konnte nicht geteilt werden."); }
 }
 
 /* ---------- Anzeige ---------- */
@@ -1978,6 +2038,17 @@ function renderSettings(){
       </div>
     </section>
     <section>
+      <div class="sec-head"><h2>Diagnose</h2><small>anonym, nur auf diesem Gerät</small></div>
+      <div class="form" style="margin-top:16px">
+        ${nativeTracker()?`<div class="full"><label>Protokoll bei Problemen</label>
+          <div class="chips">${[[true,"An"],[false,"Aus"]].map(([v,n])=>`<button type="button" class="chip" aria-pressed="${diagOn===v}" data-dlog="${v}">${n}</button>`).join("")}</div>
+          <p class="hint">Hilft zu klären, warum eine Aufzeichnung abbricht. Es hält nur technische Ereignisse fest, zum Beispiel „Dienst gestartet“ oder warum Android die App zuletzt beendet hat. Nie enthalten sind Orte, Strecken, Datum, Namen oder eine Gerätekennung. Die Datei bleibt auf dem Gerät, bis du sie selbst teilst.</p></div>
+        <div class="full"><div class="chips"><button type="button" class="chip" data-dshow>Ansehen</button><button type="button" class="chip" data-dshare>Teilen</button><button type="button" class="chip" data-dclear>Löschen</button></div>
+          <pre class="diag" id="diagText" hidden></pre></div>`
+        :`<div class="full"><p class="hint">Das Diagnose-Protokoll gibt es nur in der Android-App.</p></div>`}
+      </div>
+    </section>
+    <section>
       <div class="sec-head"><h2>Rekorde</h2><small>je Sportart</small></div>
       <p class="hint">Aktuelle Rekorde stehen oben, frühere darunter. Trägst du für dieselbe Disziplin einen neuen Rekord ein, rutscht der alte automatisch zu „Früher“.</p>
       ${SPORTS.map(([k,name])=>{
@@ -2063,6 +2134,15 @@ document.addEventListener("click", e=>{
   if(gz){ state.gps.zone=+gz.dataset.gzone; persist(); renderSettings(); return; }
   const gs=t.closest("[data-gsave]");
   if(gs){ state.gps.save=gs.dataset.gsave==="true"; persist(); renderSettings(); return; }
+  const dl=t.closest("[data-dlog]");
+  if(dl){ diagOn=dl.dataset.dlog==="true"; const P=nativeTracker(); if(P&&P.setLogEnabled) P.setLogEnabled({on:diagOn}).catch(()=>{}); renderSettings(); return; }
+  if(t.closest("[data-dshow]")){ diagShow(); return; }
+  if(t.closest("[data-dshare]")){ diagShare(); return; }
+  if(t.closest("[data-dclear]")){
+    const P=nativeTracker();
+    if(P&&P.clearLog) P.clearLog().then(()=>{ const b=$("#diagText"); if(b){ b.hidden=false; b.textContent="Noch keine Einträge."; } toast("Protokoll gelöscht.","Auf dem Gerät liegt nichts mehr davon."); }).catch(()=>{});
+    return;
+  }
   const sd=t.closest("[data-sday]");
   if(sd){ state.profile[sd.dataset.sday]=sd.dataset.v; applyProfile(); persist(); render(); return; }
   const ar=t.closest("[data-addrec]"); if(ar){ recordSheet(null, ar.dataset.addrec); return; }
@@ -2090,12 +2170,19 @@ document.addEventListener("change", e=>{
 });
 
 // Neuer Tag, wenn die App lange offen bleibt
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && dayKey(todayNow())!==dayKey(today)) render(); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden) return;
+  if(dayKey(todayNow())!==dayKey(today)) render();
+  // Zurück in der App: Läuft eine Aufzeichnung, sofort nachziehen. Wurde die Oberfläche währenddessen neu aufgebaut, wieder anknüpfen.
+  if(trk) trkTick(); else if(!trkLast) trkRestore();
+});
 
 applyProfile();
 render();
 showTab(tab, false);
+hmlog("boot");
 trkRestore();
+diagLoad().then(t=>{ if(t!=null && tab==="settings") renderSettings(); });
 })();
 </script>
 </body>

@@ -93,6 +93,18 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
+      - name: Berechtigungen prüfen
+        run: |
+          # Fehlt eine dieser Berechtigungen, stürzt die App beim Start einer Aufzeichnung ab (so geschehen mit WAKE_LOCK).
+          M=$(find android/app/build/intermediates -path '*merged_manifests/release*' -name AndroidManifest.xml | head -1)
+          [ -n "$M" ] || { echo "Zusammengeführtes Manifest nicht gefunden" >&2; exit 1; }
+          echo "Manifest: $M"
+          for p in ACCESS_FINE_LOCATION FOREGROUND_SERVICE FOREGROUND_SERVICE_LOCATION WAKE_LOCK POST_NOTIFICATIONS VIBRATE; do
+            grep -q "android.permission.$p\"" "$M" || { echo "Berechtigung fehlt: $p" >&2; exit 1; }
+          done
+          grep -q 'foregroundServiceType="location"' "$M" || { echo "Dienst-Typ location fehlt" >&2; exit 1; }
+          grep -c "uses-permission" "$M"
+
       - name: APK signieren
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
