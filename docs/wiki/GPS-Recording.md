@@ -23,7 +23,7 @@ Older versions recognized intervals and vibrated at each change. New recordings 
 
 ## Voice announcements
 
-Optional, off by default (Settings, GPS and route). Every 500 m or 1 km (in test mode also every 10 m, for trying it out) the phone says, for example:
+Optional, off by default (Settings, GPS and route). Every 500 m or 1 km (in test mode also a 10 m step for trying it out, which counts raw GPS movement and speaks about every 12 seconds) the phone says, for example:
 
 - first mark: “500 metres. Pace six twelve per kilometre. Average six twelve.”
 - later marks: “1 kilometre. Pace six ten. Average six eleven.”

@@ -10,6 +10,12 @@ package de.halbmarathon.runtracker;
  * and test mode (a larger accepted error) takes the expected error off each step.
  * If you change one of the two, change the other one too.
  *
+ * One exception, for trying out the voice: a step below 100 m (the 10 m step of test mode) counts the raw
+ * movement between fixes. It ignores the GPS speed, the noise limit and the error subtraction, so a mark
+ * is reached after a few steps, or just from GPS jitter, and the voice can be heard without running. The
+ * distances it announces are then not real. It speaks at most every {@link #RAW_GAP_SEC} seconds, because
+ * a new announcement cuts off the one before.
+ *
  * Only plain Java, no Android classes, so it can be tested on a computer.
  * Fixes must come in order and only while the recording is running (not while paused). After a pause call
  * {@link #resumed()}.
@@ -33,10 +39,13 @@ final class PaceTracker {
     }
 
     private static final double ER = 6371000.0;
+    /** Shortest time between two announcements in the raw test mode, in active seconds. */
+    static final double RAW_GAP_SEC = 12;
 
     private final double maxAcc;
     private final boolean loose;
     private final int stepM;
+    private final boolean raw;
     private final long startMs;
 
     private long lastT = Long.MIN_VALUE;
@@ -52,6 +61,8 @@ final class PaceTracker {
     private boolean hasPt = false;
     private double ptA, ptD;
     private int nextMark = 1;
+    private boolean marked = false;
+    private double lastSayA = 0;
     private double prevMarkA = 0;
 
     /**
@@ -63,6 +74,7 @@ final class PaceTracker {
         this.maxAcc = maxAccM > 35 ? maxAccM : 35;
         this.loose = this.maxAcc > 35;
         this.stepM = stepM;
+        this.raw = stepM < 100;
         this.startMs = startMs;
     }
 
@@ -94,7 +106,7 @@ final class PaceTracker {
     Mark onFix(long timeMs, double lat, double lon, double acc, double speed, double activeSec) {
         if (!(timeMs > lastT) || timeMs < startMs - 3000) return null;     // out of order or from before the start
         if (acc > maxAcc) return null;                                      // too inaccurate
-        boolean noisy = loose && acc > 35;
+        boolean noisy = loose && acc > 35 && !raw;
         double minStep = noisy ? acc : 3;                                   // with a big error, movement smaller than the error is noise
         lastT = timeMs;
         double a = Math.max(0, activeSec);
@@ -113,7 +125,7 @@ final class PaceTracker {
             return null;
         }
         drops = 0;
-        boolean hasSp = speed >= 0 && lastSp >= 0;
+        boolean hasSp = !raw && speed >= 0 && lastSp >= 0;
         double gap = (timeMs - lastFixT) / 1000.0;
         if (hasSp && gap <= 5) {
             double v0 = lastSp < 0.5 ? 0 : lastSp, v1 = speed < 0.5 ? 0 : speed;
@@ -148,12 +160,15 @@ final class PaceTracker {
         if (hasPt) {
             double span = d - ptD;
             while ((double) nextMark * stepM <= d) {
+                if (raw && marked && a - lastSayA < RAW_GAP_SEC) break;    // too soon after the last one, wait
                 double mark = (double) nextMark * stepM;
                 double f = (mark - ptD) / (span == 0 ? 1 : span);
                 double aCross = ptA + (a - ptA) * f;
                 last = new Mark(nextMark * stepM, aCross - prevMarkA, aCross);
                 prevMarkA = aCross;
-                nextMark++;
+                marked = true;
+                lastSayA = a;
+                nextMark = raw ? (int) (d / stepM) + 1 : nextMark + 1;      // raw: skip the marks that were passed
             }
         }
         hasPt = true;
