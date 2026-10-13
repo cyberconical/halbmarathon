@@ -2151,6 +2151,8 @@ async function trkEnd(){
   }
   const an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, now);
   const km=Math.round(an.dist/10)/100, sec=Math.round(an.active);
+  { const F=me.fixes, accs=F.map(f=>f[3]).filter(a=>a>=0).sort((a,b)=>a-b);   // counters only, no places
+    hmlog("stats fixes="+F.length+" badacc="+F.filter(f=>f[3]>35).length+" nospeed="+F.filter(f=>!(f[4]>=0)).length+" medacc="+Math.round(accs[accs.length>>1]||-1)+" used="+an.pts.length+" dist="+Math.round(an.dist)+"m active="+sec+"s"); }
   const sp=HMTrk.splits(an.pts,an.active);
   const route=state.gps.save?HMTrk.buildRoute(an.pts,state.gps.zone).parts:null;
   const tail=sp.length&&sp[sp.length-1].part?[sp[sp.length-1].m,sp[sp.length-1].sec]:null;
