@@ -873,6 +873,9 @@ window.HM_I18N = { de: {
 "Voice announcements": "Sprachansagen",
 "Every 500 m": "Alle 500 m",
 "Every 1 km": "Jeden Kilometer",
+"Every 10 m (test)": "Alle 10 m (Test)",
+"Voice announcements are off for this run.": "Sprachansagen sind für diesen Lauf aus.",
+"A change in Settings applies from the next run.": "Eine Änderung in den Einstellungen gilt ab dem nächsten Lauf.",
 "While recording, a voice says the distance, the pace of the last stretch and your average pace per kilometer. Always in English. It needs an English voice in the phone's text-to-speech settings. Music is turned down briefly, not stopped.": "Während der Aufzeichnung sagt eine Stimme die Strecke, das Tempo des letzten Abschnitts und dein Durchschnittstempo pro Kilometer an. Immer auf Englisch. Dafür braucht das Handy in den Einstellungen zur Sprachausgabe eine englische Stimme. Musik wird kurz leiser, nicht angehalten.",
 "Test voice": "Stimme testen",
 "Voice announcements only exist in the Android app.": "Sprachansagen gibt es nur in der Android-App.",
@@ -1609,7 +1612,7 @@ function normalize(x){
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
-    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false), test: !!(x.gps && x.gps.test===true), voice: [0,500,1000].includes(x.gps&&x.gps.voice) ? x.gps.voice : 0 },
+    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false), test: !!(x.gps && x.gps.test===true), voice: [0,10,500,1000].includes(x.gps&&x.gps.voice) ? ((x.gps.voice===10 && !(x.gps&&x.gps.test===true)) ? 500 : x.gps.voice) : 0 },
     updatedAt: x.updatedAt||0
   };
 }
@@ -2142,7 +2145,7 @@ async function trkBegin(id){
       if(ps.location!=="granted") ps=await P.requestPermissions({permissions:["location"]});
       if(ps.location!=="granted"){ fail("PERMISSION"); return; }
       if(ps.notifications && ps.notifications!=="granted"){ try{ await P.requestPermissions({permissions:["notifications"]}); }catch(e){} }
-      const r=await P.start({cues:JSON.stringify(cues), meta:id, lang:LANG, voice:state.gps.voice, maxAcc:accOpt().maxAcc});
+      const r=await P.start({cues:JSON.stringify(cues), meta:id, lang:LANG, voice:voiceStep(), maxAcc:accOpt().maxAcc});
       newTrk(id, r.startedAt||Date.now(), true);
       hmlog("begin:ok");
     } else {
@@ -2167,7 +2170,7 @@ async function trkTick(){
     if(P){
       const r=await P.getFixes({from:me.next});
       if(r.fixes && r.fixes.length) for(const f of r.fixes) me.fixes.push(f);
-      me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending; me.voice=r.voice;
+      me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending; me.voice=r.voice; me.voiceStep=r.voiceStep;
     }
     const now=Date.now();
     me.az.feed(me.fixes, me.pauses, now);          // only the fixes since the last tick
@@ -2299,6 +2302,8 @@ async function voiceTest(){
 
 /* ---------- Run screens ---------- */
 const zoneText = z => z>=1000 ? "1 km" : z+" m";
+/* The announcement step that really goes to the service: 10 m exists for test mode only. */
+const voiceStep = () => state.gps.voice===10 && !state.gps.test ? 500 : state.gps.voice;
 function showRun(view){
   liveMapDrop();
   trkView=view; runUI.hidden=false; runUI.classList.remove("work"); document.body.style.overflow="hidden";
@@ -2311,7 +2316,7 @@ function showRun(view){
       <p class="note">${tr("The app only records distance, time and route. The screen may stay off.")}</p>
       <p class="hint">${z?tr("Privacy zone: {z} around the start. Nothing is stored there, but distance and time still count.",{z:zoneText(z)}):tr("Privacy zone is off.")} ${state.gps.save?"":tr("The route won't be saved.")} ${tr("Everything stays on this device.")}</p>
       ${state.gps.test?`<p class="hint">${tr("Test mode is on: GPS fixes up to {m} m error are recorded.",{m:TEST_ACC})}</p>`:""}
-      ${state.gps.voice&&nativeTracker()?`<p class="hint">${tr("Voice announcements: every {d}, in English.",{d:zoneText(state.gps.voice)})}</p>`:""}
+      ${voiceStep()&&nativeTracker()?`<p class="hint">${tr("Voice announcements: every {d}, in English.",{d:zoneText(voiceStep())})}</p>`:""}
       <p class="err" id="rMsg"></p>
       <div class="run-btns one"><button class="btn big" type="button" data-rstart>${tr("Start")}</button></div>`;
     return;
@@ -2322,6 +2327,7 @@ function showRun(view){
       <div class="run-time" id="rTime">0:00</div>
       <div class="run-grid"><div><b id="rDist">0${DEC()}00</b><span>km</span></div><div><b id="rPace">–</b><span>min/km</span></div></div>
       <div class="livemap" id="rMap" hidden><div class="lm-ctl"><button type="button" data-lm="in" aria-label="${esc(tr("Zoom in"))}">+</button><button type="button" data-lm="out" aria-label="${esc(tr("Zoom out"))}">−</button><button type="button" data-lm="fit" aria-label="${esc(tr("Center on my position"))}">${ICONS.fit}</button></div></div>
+      <p class="hint" id="rVoice" hidden></p>
       <p class="err" id="rMsg"></p>
       <div class="run-btns"><button class="btn ghost big" type="button" data-rpause id="rPause">${tr("Pause")}</button><button class="btn big" type="button" data-rend>${tr("Finish")}</button></div>`;
     updateRun(); return;
@@ -2365,6 +2371,13 @@ function updateRun(){
   if(trk.dead) gt=tr("Service ended");
   set("rGps", gt);
   const vm=trk.voice==="no_english"?tr("No English voice found, so there are no announcements. Install one in the Android text-to-speech settings."):trk.voice==="unavailable"?tr("Text-to-speech is not available, so there are no announcements."):"";
+  // What the service really does for this run, so a change made in Settings after Start is not mistaken for it.
+  let vi="";
+  if(!vm && trk.native && typeof trk.voiceStep==="number"){
+    vi=trk.voiceStep>0?tr("Voice announcements: every {d}, in English.",{d:zoneText(trk.voiceStep)}):tr("Voice announcements are off for this run.");
+    if(trk.voiceStep!==voiceStep()) vi+=" "+tr("A change in Settings applies from the next run.");
+  }
+  const vh=document.getElementById("rVoice"); if(vh){ vh.textContent=vi; vh.hidden=!vi; }
   const m=document.getElementById("rMsg"); if(m) m.textContent = trk.dead?tr("The system ended the recording. Finish the run to keep the data so far."):(trk.geoErr?tr("Location is not being shared."):vm);
   liveMapUpdate();
 }
@@ -3266,7 +3279,7 @@ function renderSettings(){
           ${chipRow([[true,tr("On")],[false,tr("Off")]], state.gps.test, "data-gtest")}
           <p class="hint">${tr("Normally fixes with an error above 35 m are ignored. In test mode the app also records fixes up to {m} m. Distance and route are then less exact. For testing only, turn it off again afterwards.",{m:TEST_ACC})}</p></div>
         ${nativeTracker()?`<div class="full"><label>${tr("Voice announcements")}</label>
-          ${chipRow([[0,tr("Off")],[500,tr("Every 500 m")],[1000,tr("Every 1 km")]], state.gps.voice, "data-gvoice")}
+          ${chipRow([[0,tr("Off")],[500,tr("Every 500 m")],[1000,tr("Every 1 km")]].concat(state.gps.test?[[10,tr("Every 10 m (test)")]]:[]), state.gps.voice, "data-gvoice")}
           <p class="hint">${tr("While recording, a voice says the distance, the pace of the last stretch and your average pace per kilometer. Always in English. It needs an English voice in the phone's text-to-speech settings. Music is turned down briefly, not stopped.")}</p>
           <div class="chips"><button type="button" class="chip" data-vtest>${tr("Test voice")}</button></div></div>`
         :`<div class="full"><label>${tr("Voice announcements")}</label><p class="hint">${tr("Voice announcements only exist in the Android app.")}</p></div>`}
@@ -3377,7 +3390,7 @@ document.addEventListener("click", e=>{
   const gz=t.closest("[data-gzone]");
   if(gz){ state.gps.zone=+gz.dataset.gzone; persist(); renderSettings(); return; }
   const gt=t.closest("[data-gtest]");
-  if(gt){ state.gps.test=gt.dataset.gtest==="true"; persist(); renderSettings(); return; }
+  if(gt){ state.gps.test=gt.dataset.gtest==="true"; if(!state.gps.test && state.gps.voice===10) state.gps.voice=500; persist(); renderSettings(); return; }
   const gv=t.closest("[data-gvoice]");
   if(gv){ state.gps.voice=+gv.dataset.gvoice; persist(); renderSettings(); return; }
   if(t.closest("[data-vtest]")){ voiceTest(); return; }

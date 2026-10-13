@@ -212,6 +212,7 @@ public class RunTrackerPlugin extends Plugin {
         ret.put("paused", RunTrackerService.paused);
         ret.put("gps", RunTrackerService.gpsOn);
         ret.put("voice", RunTrackerService.voiceStatus);
+        ret.put("voiceStep", RunTrackerService.voiceStepM);
         call.resolve(ret);
     }
 
