@@ -14,7 +14,7 @@ The plan has 27 weeks. Every week follows the same pattern:
 | Saturday | rest |
 | Sunday | **long run** |
 
-For Monday, Tuesday and Friday you choose in Settings: strength, bouldering, calisthenics, stretching, yoga, swimming, cycling or off. In race week there is no extra session on Friday.
+For Monday, Tuesday and Friday you choose in Settings: strength, bouldering, calisthenics, stretching, yoga, swimming, cycling, workout or off. In race week there is no extra session on Friday.
 
 ## The five phases
 
@@ -54,7 +54,7 @@ If you prefer recording with GPS, see [[GPS recording|GPS-Recording]]. The resul
 
 ## Something else instead of the run
 
-If a run doesn't happen, you can record what you did instead: sauna, rest day, swimming, cycling, yoga or sick. The app comments kindly and advises not to make up the run.
+If a run doesn't happen, you can record what you did instead: sauna, rest day, swimming, cycling, yoga or sick. The app comments kindly and advises not to make up the run. This choice is not offered for a run that is already logged, so a logged run can't be overwritten by accident. Delete the entry or change the type under “Adjusting sessions”.
 
 ## “Done today?” Quick logging
 
@@ -74,7 +74,7 @@ Every session can be changed without changing the plan itself. Your changes lie 
 - another weekday
 - your own title and description
 - different planned minutes (runs only, not the race)
-- a different type for extra sessions
+- a different **type for any session**, runs included: Run, Strength, Bouldering, Calisthenics, Stretching, Yoga, Swimming, Cycling or Workout (only the race itself is fixed). A logged run stays stored when its session becomes another sport and comes back when you switch to Run again
 - extra sessions can be removed from the plan; runs cannot
 
 “Back to plan” restores the suggestion at any time. Technical details: [[Data model|Data-Model]], section `edits`.

@@ -13,7 +13,7 @@ Detailed guides, the architecture and the low-code manifesto are in the [wiki](h
 - Log runs with kilometers, time, feel, shoes and time of day.
 - Extra sessions such as strength, bouldering or yoga on three days of your choice.
 - Log what you did today with one tap. Every session can be adjusted, and “Back to plan” restores the suggestion.
-- Optional GPS recording: distance, time, pace, every interval segment of the plan and every kilometer. For intervals the phone vibrates at each change, and the screen may stay off.
+- Optional GPS recording: distance, time, pace, every kilometer and the route. It only tracks, and the screen may stay off.
 - The route appears as a map in the run and, overlaid, in the stats. Drag to move it, pinch, double tap or use + and − to zoom, or open it full screen. GPS noise is smoothed so the line follows your path. The map is a drawn line; no map tiles are loaded.
 
 **Habits**
