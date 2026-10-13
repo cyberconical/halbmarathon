@@ -56,7 +56,7 @@ final class PaceTracker {
 
     /**
      * @param maxAccM accepted error of a fix in metres (35, or more in test mode)
-     * @param stepM   distance between two marks in metres (500 or 1000)
+     * @param stepM   distance between two marks in metres (500 or 1000, 10 in test mode)
      * @param startMs start of the recording (wall clock, like the time of the fixes)
      */
     PaceTracker(double maxAccM, int stepM, long startMs) {

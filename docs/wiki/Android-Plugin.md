@@ -30,7 +30,7 @@ Called from `index.html` via `Capacitor.Plugins.RunTracker`.
 | `testVoice` | – | – | speak a sample announcement. Error codes: `NO_ENGLISH` (no English voice installed), `UNAVAILABLE` (no speech engine) |
 | `pause` / `resume` | – | `{t}` | cancel and reschedule cues |
 | `stop` | – | `{count}` | end the recording; fixes stay available until the next start |
-| `getFixes` | `from` | `{fixes, next, running, paused, gps, voice}` | fixes from position `from`, at most 2,000 per call. `voice` is `off`, `init`, `ready`, `no_english` or `unavailable` |
+| `getFixes` | `from` | `{fixes, next, running, paused, gps, voice, voiceStep}` | fixes from position `from`, at most 2,000 per call. `voice` is `off`, `init`, `ready`, `no_english` or `unavailable`; `voiceStep` is the step in metres the running service uses (0 = off) |
 | `getStatus` | – | `{running, paused, gps, gpsEnabled, count, startedAt, meta, cues, state}` | state for reattaching |
 | `saveState` | `state` (JSON text) | – | store the UI's small state in the service |
 | `diagLog` | `e` (text) | – | write a UI event to the log |
@@ -47,7 +47,7 @@ The app shows its own, translated error messages based on the error codes. The p
 - Stores fixes as `[time, lat, lon, accuracy, speed]` in a list **only in memory**, at most 30,000 (over 8 hours at one fix per second).
 - Schedules the cues on active running time. On pause they are cancelled, on resume rescheduled. The cue texts come from the app in its language.
 - Holds a **wake lock** (at most 4 hours) for runs with cues, so cues come on time with the screen off. A failure there is logged and does not stop the recording.
-- **Voice announcements** (if `voice` is 500 or 1000): every fix also goes to `PaceTracker`, which uses the same distance rules as the app (accuracy limit, jump filter, GPS speed first, noise limit, test mode). When a mark is crossed, `Announcer` speaks it in English, see [[GPS recording|GPS-Recording]]. The speech engine is started with the recording and released when it ends. If it is missing or has no English voice, `getFixes` reports it and the recording continues without speech. Nothing is counted or spoken while paused.
+- **Voice announcements** (if `voice` is 500 or 1000, or 10 in test mode): every fix also goes to `PaceTracker`, which uses the same distance rules as the app (accuracy limit, jump filter, GPS speed first, noise limit, test mode). When a mark is crossed, `Announcer` speaks it in English, see [[GPS recording|GPS-Recording]]. The speech engine is started with the recording and released when it ends. If it is missing or has no English voice, `getFixes` reports it and the recording continues without speech. Nothing is counted or spoken while paused.
 - Does **not** restart after the process ended (`START_NOT_STICKY`). Without fixes there is nothing to continue.
 - If Android starts the service only to end it right away, it still calls `startForeground()`. Otherwise Android would end the app for a broken promise.
 

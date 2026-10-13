@@ -92,7 +92,7 @@ public class RunTrackerService extends Service implements LocationListener {
         startedAt = System.currentTimeMillis();
         appState = "";
         lang = "de".equals(language) ? "de" : "en";
-        voiceStepM = (voiceStep == 500 || voiceStep == 1000) ? voiceStep : 0;
+        voiceStepM = (voiceStep == 10 || voiceStep == 500 || voiceStep == 1000) ? voiceStep : 0;
         voiceMaxAcc = (maxAccM >= 35 && maxAccM <= 200) ? maxAccM : 35;
         voiceStatus = voiceStepM > 0 ? Announcer.INIT : "off";
         paused = false;
