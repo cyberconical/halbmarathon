@@ -70,6 +70,18 @@ Roughly what a run without problems looks like. The order within the same second
 | `start:reject GPS_OFF` | location was off. |
 | `fix:first after=` very large or missing | poor reception at the start |
 
+### Recording quality and map lines
+
+| Line | Meaning |
+|---|---|
+| `stats fixes= used= dist= active= pauses=` | points received, points that made the line, distance in m, running time |
+| `acc <=10: <=20: <=35: >35(dropped): best= med= worst=` | how accurate the GPS points were (m). Points worse than 35 m are dropped; indoors most are |
+| `drop old= paused= jump= still=` | points dropped as too old, during a pause, as a jump, or as standing still |
+| `speed doppler= slow(<0.5)= nospeed= max=` | points with a chip speed, how many read as standing, and the top speed |
+| `route save= zone= parts= pts= km=` | whether the route is saved, a privacy zone is set, and how much line is left |
+| `map:try`, `map:file`, `map:header`, `map:loaded ms=` | the basemap was attempted, the file was found, read, and drawn |
+| `map:nofile`, `map:nowebgl`, `map:outside`, `map:fail`, `map:err …`, `map:timeout` | why the plain line map is shown instead |
+
 The event words are fixed technical codes and don't change with the language setting.
 
 ## Reporting a problem
