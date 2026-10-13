@@ -2419,7 +2419,7 @@ function mapFull(el, on){
    streets, parks, water and names, all read from files on the device. The app still calls no servers.
    Without that file, without WebGL, or for a route outside the map's area, the plain line map above stays.
    The libraries (MapLibre GL JS, PMTiles, Protomaps style) live in map/ and load only when first needed. */
-const BASEMAP = { file:"map/berlin.pmtiles", bbox:[12.95,52.30,13.85,52.72], ready:null, range:false, buf:null };   // bbox: west, south, east, north
+const BASEMAP = { dir:"map/berlin/", chunk:1048576, bbox:[12.95,52.30,13.85,52.72], ready:null, cache:new Map() };   // bbox: west, south, east, north
 const GLDATA = new Map(), GLLIVE = []; let GLSEQ = 0;
 const FLAVOR_LIGHT = { earth:"#f3f0e9", park_a:"#d6eacb", park_b:"#bddcae", wood_a:"#cde5c2", wood_b:"#b2d6a2", water:"#a7d1f3", buildings:"#e7e0d4",
   pedestrian:"#ece8dd", hospital:"#f4e0e0", school:"#ece6d6", industrial:"#e8e5df", other:"#f7f5f0", minor_service:"#faf8f4", minor_a:"#fbfaf7", minor_b:"#ffffff",
@@ -2429,11 +2429,24 @@ const FLAVOR_DARK = {};
 const glDark = () => { const t=document.documentElement.dataset.theme; return t==="dark" || (t!=="light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); };
 const GLPR = () => Math.min(window.devicePixelRatio||1, 2);   // a 2.7x canvas needs twice the memory of a 2x one and looks the same
 const glScript = src => new Promise((ok,no)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>no(new Error("load "+src)); document.head.appendChild(s); });
-/* Reads the archive in pieces if the file server supports ranges, otherwise loads the whole file once. */
+/* The map archive ships as 1 MB pieces (map/berlin/p0000.pmtiles, p0001 …, cut by the build). The Android file server
+   answers a Range request with the WHOLE file, so partial reads of one big file would load 37 MB every time and read
+   the wrong bytes. A piece is an ordinary small file: it is fetched whole and the last few are kept in memory. */
+const chunkURL = i => BASEMAP.dir+"p"+String(i).padStart(4,"0")+".pmtiles";
+function baseChunk(i){
+  const C=BASEMAP.cache; let p=C.get(i);
+  if(p){ C.delete(i); C.set(i,p); return p; }
+  p=fetch(chunkURL(i)).then(r=>{ if(!r.ok) throw new Error("map piece "+i+" status "+r.status); return r.arrayBuffer(); });
+  C.set(i,p); p.catch(()=>{ if(C.get(i)===p) C.delete(i); });
+  while(C.size>8) C.delete(C.keys().next().value);
+  return p;
+}
 const baseSource = { getKey:()=>"berlin", getBytes: async (off,len)=>{
-  if(BASEMAP.range){ try{ const r=await fetch(BASEMAP.file,{headers:{Range:"bytes="+off+"-"+(off+len-1)}}); if(r.status===206) return {data:await r.arrayBuffer()}; }catch(e){} }
-  if(!BASEMAP.buf) BASEMAP.buf=await (await fetch(BASEMAP.file)).arrayBuffer();
-  return {data:BASEMAP.buf.slice(off,off+len)};
+  const K=BASEMAP.chunk, i0=Math.floor(off/K), i1=Math.floor((off+len-1)/K);
+  if(i0===i1){ const b=await baseChunk(i0), s=off-i0*K; return {data:b.slice(s,s+len)}; }
+  const out=new Uint8Array(len);
+  for(let i=i0;i<=i1;i++){ const b=new Uint8Array(await baseChunk(i)), s=Math.max(off,i*K), e=Math.min(off+len,(i+1)*K); out.set(b.subarray(s-i*K,e-i*K), s-off); }
+  return {data:out.buffer};
 } };
 function baseReady(){
   if(BASEMAP.ready) return BASEMAP.ready;
@@ -2441,15 +2454,16 @@ function baseReady(){
     try{
       const c=document.createElement("canvas");
       if(!(c.getContext("webgl2")||c.getContext("webgl"))){ hmlogOnce("map:nowebgl"); return false; }
-      const r=await fetch(BASEMAP.file,{headers:{Range:"bytes=0-0"}});          // is the map file there?
+      const r=await fetch(chunkURL(0));                                           // is the map there? (first piece, also needed for the header)
       if(!r.ok){ hmlogOnce("map:nofile status="+r.status); return false; }
-      BASEMAP.range = r.status===206; { const cr=(r.headers.get("content-range")||"").split("/")[1], cl=r.headers.get("content-length"); hmlogOnce("map:file status="+r.status+" sizeMB="+Math.round((+cr||(r.status===200?+cl:0)||0)/1e5)/10+" type="+String(r.headers.get("content-type")||"?").slice(0,30)); } if(r.body && r.body.cancel) r.body.cancel();
+      const ab0=await r.arrayBuffer(); BASEMAP.cache.set(0,Promise.resolve(ab0));
+      hmlogOnce("map:file pieces status="+r.status+" pieceKB="+Math.round(ab0.byteLength/1024)+" type="+String(r.headers.get("content-type")||"?").slice(0,30));
       const css=document.createElement("link"); css.rel="stylesheet"; css.href="map/maplibre-gl.css"; document.head.appendChild(css);
       await glScript("map/maplibre-gl.js"); await glScript("map/pmtiles.js"); await glScript("map/basemaps.js");
       try{ if(maplibregl.setWorkerCount) maplibregl.setWorkerCount(1); }catch(e){}      // one tile worker thread instead of two
       const proto=new pmtiles.Protocol(); maplibregl.addProtocol("pmtiles", proto.tilev4); proto.add(new pmtiles.PMTiles(baseSource));
-      hmlogOnce("map:ready range="+(BASEMAP.range?1:0)+" ml="+(maplibregl.getVersion?maplibregl.getVersion():"?"));
-      const t0=Date.now(); new pmtiles.PMTiles(baseSource).getHeader().then(h=>hmlogOnce("map:header zoom="+h.minZoom+"-"+h.maxZoom+" tiles="+h.numAddressedTiles+" ms="+(Date.now()-t0)), e=>hmlogOnce("map:headerfail "+String(e&&e.message||e).slice(0,60)));
+      hmlogOnce("map:ready pieces ml="+(maplibregl.getVersion?maplibregl.getVersion():"?"));
+      const t0=Date.now(); new pmtiles.PMTiles(baseSource).getHeader().then(h=>hmlogOnce("map:header zoom="+h.minZoom+"-"+h.maxZoom+" tiles="+h.numAddressedTiles+" sizeMB="+Math.round((h.tileDataOffset+h.tileDataLength)/1e5)/10+" ms="+(Date.now()-t0)), e=>hmlogOnce("map:headerfail "+String(e&&e.message||e).slice(0,60)));
       return true;
     }catch(e){ hmlogOnce("map:off "+String(e&&e.message||e).slice(0,60)); return false; }
   })();

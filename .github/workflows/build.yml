@@ -49,7 +49,12 @@ jobs:
       - name: Prepare project
         run: |
           mkdir www && cp index.html www/ && cp -r fonts map www/
-          if [ -f basemap/berlin.pmtiles ]; then cp basemap/berlin.pmtiles www/map/; else echo 'No basemap file, using the line map'; fi
+          if [ -f basemap/berlin.pmtiles ]; then
+            # 1 MB pieces: the Android file server cannot do partial reads of one big file (see index.html, baseSource)
+            mkdir -p www/map/berlin
+            split -b 1048576 -d -a 4 --additional-suffix=.pmtiles basemap/berlin.pmtiles www/map/berlin/p
+            echo "basemap pieces: $(ls www/map/berlin | wc -l)"
+          else echo 'No basemap file, using the line map'; fi
           npm init -y
           npm install @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
           npm install -D @capacitor/cli@6
