@@ -6,7 +6,7 @@ The `<script id="engine">` block in `index.html` provides the object `window.HMT
 
 | Function | Input | Output |
 |---|---|---|
-| `parseSegments(desc, planMin)` | session description (English or German), planned minutes | segments `[{k, sec, label}]`, empty = free run |
+| `parseSegments(desc, planMin)` (no longer used by the app) | session description (English or German), planned minutes | segments `[{k, sec, label}]`, empty = free run |
 | `cuesFor(segs, label, endText)` | segments, label function, final text | cues `[{at, v, n}]` for the service |
 | `current(segs, act)` | segments, running time in s | current segment, time left, next |
 | `analyze(fixes, startMs, pauses, nowMs)` | raw fixes, start, pauses | cleaned points, distance, running time |

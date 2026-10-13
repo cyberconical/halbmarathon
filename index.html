@@ -89,6 +89,8 @@ section{ margin-top:56px; }
 .done .dot{ background:var(--fg); color:var(--bg); }
 .swapped .dot{ border-style:dashed; }
 .result{ font-size:14px; font-weight:700; text-align:right; }
+.sess-end{ display:flex; align-items:center; gap:10px; }
+.swapped .dot{ background:none; }
 .sess-body{ padding:0 0 20px 64px; }
 .sess-body p{ margin:0 0 14px; }
 .form{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -98,6 +100,14 @@ label.lb, .form label{ display:block; font-size:13px; color:var(--mute); margin-
   background:var(--bg); color:var(--fg); border:2px solid var(--fg); border-radius:0;
 }
 textarea.inp{ font-size:16px; font-weight:400; resize:vertical; min-height:84px; }
+select.inp{ font-size:16px; font-weight:600; padding:10px 8px; appearance:auto; }
+.form .seg button{ padding:8px 4px; }
+.trkd{ margin:0 0 14px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.trkd > summary{ cursor:pointer; padding:10px 0; font-weight:600; font-size:15px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+.trkd > summary::-webkit-details-marker{ display:none; }
+.trkd > summary::after{ content:"+"; font-size:20px; font-weight:800; }
+.trkd[open] > summary::after{ content:"–"; }
+.trkd .trkbox{ margin:0 0 12px; }
 .form .full{ grid-column:1/-1; }
 .seg{ display:flex; border:2px solid var(--fg); }
 .seg button{ flex:1; padding:10px 4px; border:0; background:var(--bg); cursor:pointer; font-size:15px; }
@@ -136,7 +146,7 @@ textarea.inp{ font-size:16px; font-weight:400; resize:vertical; min-height:84px;
 .run-btns .wide{ grid-column:1/-1; }
 .btn.big{ padding:20px 18px; font-size:19px; }
 .trkbox{ margin:4px 0 18px; }
-.map{ position:relative; height:min(80vw,440px); margin:14px 0; border:2px solid var(--line); overflow:hidden; background:var(--bg); touch-action:none; user-select:none; -webkit-user-select:none; }
+.map{ position:relative; height:min(64vw,320px); margin:14px 0; border:2px solid var(--line); overflow:hidden; background:var(--bg); touch-action:none; user-select:none; -webkit-user-select:none; }
 .map svg{ width:100%; height:100%; display:block; cursor:grab; }
 .map.drag svg{ cursor:grabbing; }
 .map.full{ position:fixed; inset:0; z-index:60; height:auto; margin:0; border:0; }
@@ -161,8 +171,8 @@ textarea.inp{ font-size:16px; font-weight:400; resize:vertical; min-height:84px;
 .phase > p{ margin:6px 0 8px; color:var(--mute); font-size:15px; }
 details.wk{ border-top:1px solid var(--line); }
 details.wk:last-child{ border-bottom:1px solid var(--line); }
-details.wk summary{ list-style:none; cursor:pointer; display:grid; grid-template-columns:64px 1fr auto; gap:10px; padding:12px 0; align-items:center; }
-details.wk summary::-webkit-details-marker{ display:none; }
+details.wk > summary{ list-style:none; cursor:pointer; display:grid; grid-template-columns:64px 1fr auto; gap:10px; padding:12px 0; align-items:center; }
+details.wk > summary::-webkit-details-marker{ display:none; }
 .wk-n{ font-weight:800; font-stretch:75%; font-size:20px; }
 .wk-d{ font-size:14px; color:var(--mute); }
 .wk-bar{ width:80px; height:6px; background:var(--soft); position:relative; }
@@ -491,6 +501,7 @@ window.HM_I18N = { de: {
 "All saved": "Alles gespeichert",
 "All saved routes in your area on top of each other. The more often you run a street, the darker it gets. Drag to move, pinch or use + and − to zoom.": "Alle gespeicherten Routen in deiner Gegend übereinander. Je öfter du eine Straße läufst, desto dunkler. Ziehen zum Verschieben, mit zwei Fingern oder + und − zoomen.",
 "An area of about {z} around the start is missing on purpose.": "Ein Bereich von rund {z} um den Start fehlt absichtlich.",
+"An easy run. Listen to your body.": "Ein lockerer Lauf. Hör auf deinen Körper.",
 "An extra session that keeps you stable. Easy to moderate, not to exhaustion.": "Zusatzeinheit, die dich stabil macht. Locker bis mittel, nicht bis zur Erschöpfung.",
 "Android closed the app in the background and the GPS points are lost. Settings, Diagnostics shows what happened.": "Android hat die App im Hintergrund geschlossen, die Messpunkte sind verloren. Unter Einstellungen, Diagnose steht, was passiert ist.",
 "anonymous, only on this device": "anonym, nur auf diesem Gerät",
@@ -540,6 +551,7 @@ window.HM_I18N = { de: {
 "Day": "Tag",
 "Days to the start": "Tage bis zum Start",
 "Delete": "Löschen",
+"Delete this run? The recorded route is deleted too.": "Diesen Lauf löschen? Die aufgezeichnete Route wird ebenfalls gelöscht.",
 "Delete “{name}” with all entries?": "„{name}“ mit allen Einträgen löschen?",
 "Delete all data": "Alle Daten löschen",
 "Delete entry": "Eintrag löschen",
@@ -555,6 +567,8 @@ window.HM_I18N = { de: {
 "Didn't run? What did you do instead?": "Nicht gelaufen? Was hast du stattdessen gemacht?",
 "Dips": "Dips",
 "Discard": "Verwerfen",
+"Discard recording": "Aufzeichnung verwerfen",
+"Discard this recording?": "Diese Aufzeichnung verwerfen?",
 "Discipline": "Disziplin",
 "Distance": "Distanz",
 "Don't make up the run, just carry on with the next one.": "Den Lauf nicht nachholen, einfach mit dem nächsten weitermachen.",
@@ -756,6 +770,7 @@ window.HM_I18N = { de: {
 "Nothing of it is left on the device.": "Auf dem Gerät liegt nichts mehr davon.",
 "Nothing solved yet.": "Noch nichts gelöst.",
 "Nothing to share.": "Nichts zu teilen.",
+"Nothing was saved.": "Es wurde nichts gespeichert.",
 "Number": "Zahl",
 "Nutrition": "Ernährung",
 "Off": "Aus",
@@ -802,7 +817,9 @@ window.HM_I18N = { de: {
 "Record {km}": "Rekord {km}",
 "Record saved.": "Rekord gespeichert.",
 "Record with GPS": "Mit GPS aufzeichnen",
+"Recording": "Aufzeichnung",
 "Recording applied. Check the values and save the run.": "Aufzeichnung übernommen. Prüfe die Werte und speichere den Lauf.",
+"Recording discarded.": "Aufzeichnung verworfen.",
 "Records": "Rekorde",
 "Recovery": "Erholung",
 "Recovery is where you get stronger.": "In der Erholung wirst du stärker.",
@@ -815,7 +832,9 @@ window.HM_I18N = { de: {
 "Rest is part of the plan.": "Pause gehört zum Plan.",
 "Resume": "Weiter",
 "Reverse lunges": "Ausfallschritte rückwärts",
+"Route and kilometers": "Route und Kilometer",
 "Run": "Lauf",
+"Run deleted.": "Lauf gelöscht.",
 "Run in progress": "Lauf läuft",
 "Run paused": "Lauf pausiert",
 "Running": "Laufen",
@@ -887,6 +906,7 @@ window.HM_I18N = { de: {
 "The 10 km are done. {x} is coming along.": "Die 10 km sind geschafft. {x} macht mit.",
 "The app can't record without your precise location. Allow it in the Android settings under Apps, Half Marathon, Permissions.": "Ohne den genauen Standort kann die App nicht aufzeichnen. Erlaube ihn in den Android-Einstellungen unter Apps, Halbmarathon, Berechtigungen.",
 "The app found {n} fast segments in the plan and signals every change by vibration. The screen may stay off.": "Die App erkennt {n} Tempo-Abschnitte im Plan und meldet jeden Wechsel per Vibration. Der Bildschirm darf aus bleiben.",
+"The app only records distance, time and route. The screen may stay off.": "Die App zeichnet nur Strecke, Zeit und Route auf. Der Bildschirm darf aus bleiben.",
 "The backup could not be shared.": "Das Backup konnte nicht geteilt werden.",
 "The clock is stopped.": "Die Zeit steht.",
 "The diagnostic log only exists in the Android app.": "Das Diagnose-Protokoll gibt es nur in der Android-App.",
@@ -909,6 +929,7 @@ window.HM_I18N = { de: {
 "The rule for {x}": "Die Regel für {x}",
 "The rule for discomfort": "Die Regel bei Beschwerden",
 "The session is back the way it was planned.": "Die Einheit steht wieder so da, wie sie geplant war.",
+"The session is open again.": "Die Einheit ist wieder offen.",
 "the spot": "die Stelle",
 "The system ended the recording. Finish the run to keep the data so far.": "Das System hat die Aufzeichnung beendet. Beende den Lauf, um die bisherigen Daten zu sichern.",
 "The title can't be empty.": "Der Titel darf nicht leer sein.",
@@ -946,6 +967,7 @@ window.HM_I18N = { de: {
 "Weeks {a}–{b}.": "Woche {a}–{b}.",
 "Well done.": "Gut gemacht.",
 "What did you notice or learn?": "Was hast du bemerkt oder gelernt?",
+"Workout": "Workout",
 "Yes": "Ja",
 "Yoga": "Yoga",
 "You already have entries. They stay with their weeks (week 1, 2, …), only the calendar days of the weeks shift. Continue?": "Du hast schon Einträge. Sie bleiben ihren Wochen zugeordnet (Woche 1, 2, …), nur die Kalendertage der Wochen verschieben sich. Fortfahren?",
@@ -954,6 +976,7 @@ window.HM_I18N = { de: {
 "You ran further than ever before. {km} km to go.": "Du bist weiter gelaufen als je zuvor. Noch {km} km bis zum Ziel.",
 "Your comparison by shoe type and time of day.": "Dein Vergleich nach Schuhtyp und Tageszeit.",
 "Your goal": "Dein Ziel",
+"Your logged run stays saved. It comes back if you switch to Run again.": "Dein eingetragener Lauf bleibt gespeichert. Er kommt zurück, wenn du wieder auf Lauf stellst.",
 "Your longest run in the plan: {km} km. The line below grows with every Sunday.": "Dein längster Lauf im Plan: {km} km. Die Linie unten wächst mit jedem Sonntag.",
 "Your plan has been realigned.": "Dein Plan ist neu ausgerichtet.",
 "Your previous record is {km} km, you are not starting from zero.": "Dein bisheriger Rekord liegt bei {km} km, du fängst nicht bei null an.",
@@ -1404,9 +1427,11 @@ const LINES = [
 /* Stored values are short German tokens from earlier versions ("Kraft", "Ruhetag", "gut", …).
    They stay unchanged so existing data and backups keep working. Only their display is translated. */
 const ALTS = ["Sauna","Ruhetag","Schwimmen","Rad","Yoga","Krank"];
-const DAYCHOICES = ["Kraft","Bouldern","Calisthenics","Stretching","Yoga","Schwimmen","Rad","Aus"];
+const DAYCHOICES = ["Kraft","Bouldern","Calisthenics","Stretching","Yoga","Schwimmen","Rad","Workout","Aus"];
+/* Every session of the plan can be changed to any of these at any time. "Lauf" turns a session into a run. */
+const SPORTCHOICES = ["Lauf",...DAYCHOICES.filter(c=>c!=="Aus")];
 const TOKENS = { Kraft:"Strength", Bouldern:"Bouldering", Calisthenics:"Calisthenics", Stretching:"Stretching", Yoga:"Yoga",
-  Schwimmen:"Swimming", Rad:"Cycling", Aus:"Off", Sauna:"Sauna", Ruhetag:"Rest day", Krank:"Sick", Lauf:"Run" };
+  Schwimmen:"Swimming", Rad:"Cycling", Workout:"Workout", Aus:"Off", Sauna:"Sauna", Ruhetag:"Rest day", Krank:"Sick", Lauf:"Run" };
 const tok = x => TOKENS[x] ? tr(TOKENS[x]) : String(x==null?"":x);
 const SHOES = [["barfuss","Barefoot shoes"],["normal","Regular shoes"]];
 const TODS = [["morgen","Morning"],["mittag","Midday"],["abend","Evening"],["nacht","Night"]];
@@ -1455,6 +1480,8 @@ function applyProfile(){
 // Your own changes live separately from the plan (state.edits) and are laid on top of it.
 // So the plan stays the suggestion, and "Back to plan" restores it at any time.
 const genericText = () => tr("An extra session that keeps you stable. Easy to moderate, not to exhaustion.");
+const runText = () => tr("An easy run. Listen to your body.");
+const slotLabel = b => b.kind==="run" ? "Lauf" : b.label;   // the sport the plan itself has in this slot
 function applyEdits(){
   const E=state.edits||{}; SKIPPED=[];
   const keep=[];
@@ -1464,7 +1491,14 @@ function applyEdits(){
     if(e.skip && b.kind!=="run"){ SKIPPED.push(b); return; }
     const s={...b}, mon=addDays(START,(s.week-1)*7);
     if(Number.isInteger(e.off) && e.off>=0 && e.off<=6){ s.date=addDays(mon,e.off); s.day=WD(s.date.getDay()); }
-    if(s.kind!=="run" && DAYCHOICES.includes(e.label) && e.label!=="Aus" && e.label!==s.label){ s.label=e.label; s.t=tok(e.label); s.d=genericText(); }
+    // Any session except race day can change its sport. Logged runs stay stored when a run becomes another sport.
+    if(!b.race && SPORTCHOICES.includes(e.label) && e.label!==slotLabel(b)){
+      if(e.label==="Lauf"){ s.kind="run"; s.label="Lauf"; s.min=30; s.t=tok("Lauf"); s.d=runText(); }
+      else {
+        if(b.kind==="run"){ s.kind=isBoulder(e.label)?"boulder":"kraft"; delete s.min; }
+        s.label=e.label; s.t=tok(e.label); s.d=genericText();
+      }
+    }
     if(typeof e.t==="string" && e.t.trim()) s.t=e.t.trim().slice(0,40);
     if(typeof e.d==="string" && e.d.trim()) s.d=e.d.trim().slice(0,400);
     if(s.kind==="run" && !s.race && e.min>0 && e.min<=300) s.min=Math.round(e.min);
@@ -1609,13 +1643,14 @@ function sessHTML(s, open){
   let right="";
   if(alt) right=`<span class="result">${esc(tok(alt.what))}<br><span class="sess-sub">${tr("instead of plan")}</span></span>`;
   if(log) right=`<span class="result">${fmtKm(log.km)} km<br><span class="sess-sub">${fmtPace(log.sec/log.km)} /km</span></span>`;
-  let sub = s.kind==="run" ? (s.race?fmtKm(21.1)+" km":fmtMin(s.min)) : s.kind==="boulder" ? tr("Ideal, but optional") : tr("Strength & stability");
+  let sub = s.kind==="run" ? (s.race?fmtKm(21.1)+" km":fmtMin(s.min)) : (s.kind==="boulder"||(s.label&&s.label!=="Kraft")) ? tr("Ideal, but optional") : tr("Strength & stability");
   if(s.edited) sub+=" · "+tr("adjusted");
   if(log){ const ex=[labelOf(SHOES,log.shoe),labelOf(TODS,log.tod)].filter(Boolean); if(ex.length) sub+=" · "+ex.join(" · "); }
   let body=`<p>${esc(s.d)}</p><button class="linkbtn edit-link" type="button" data-editsess="${s.id}">${tr("Adjust session")}</button>`;
   if(s.kind==="run"){
     const l=log||{}, pd=(!log && pend && pend.id===s.id)?pend:null;
-    body+=trkHTML(log?log.trk:pd&&pd.trk);
+    body+=trkHTML(log?log.trk:pd&&pd.trk, {fold:true});
+    const shoeNow=l.shoe||(!log?lastShoe():null);
     body+=`<div class="form" data-form="${s.id}">
       ${log?"":`<div class="full"><button class="btn ghost" type="button" data-gps="${s.id}">${trk&&trk.id===s.id?tr("Open recording"):tr("Record with GPS")}</button>${pd?`<p class="hint">${tr("Recording applied. Check the values and save the run.")}</p>`:""}</div>`}
       <div><label for="km-${s.id}">${tr("Kilometers")}</label><input type="text" inputmode="decimal" id="km-${s.id}" placeholder="${esc(tr("e.g. {x}",{x:fmtKm(5.2)}))}" value="${l.km?fmtKm(l.km):pd?fmtKm(pd.km):""}"></div>
@@ -1624,11 +1659,11 @@ function sessHTML(s, open){
         <div class="seg" data-seg="feel">${["Tough","Okay","Good","Strong","Top"].map((x,i)=>`<button type="button" aria-pressed="${l.feel===i+1}" data-v="${i+1}">${tr(x)}</button>`).join("")}</div></div>
       ${prob()?`<div class="full"><label>${esc(prob())}</label>
         <div class="seg" data-seg="knee">${[["gut","All good"],["zieht","Slight pull"],["schmerzt","Hurts"]].map(([v,x])=>`<button type="button" aria-pressed="${l.knee===v}" data-v="${v}">${tr(x)}</button>`).join("")}</div></div>`:""}
-      <div class="full"><label>${tr("Shoes")}</label>
-        <div class="seg" data-seg="shoe">${SHOES.map(([v,x])=>`<button type="button" aria-pressed="${(l.shoe||(!log?lastShoe():null))===v}" data-v="${v}">${tr(x)}</button>`).join("")}</div></div>
-      <div class="full"><label>${tr("Time of day")}</label>
-        <div class="seg" data-seg="tod">${TODS.map(([v,x])=>`<button type="button" aria-pressed="${l.tod===v}" data-v="${v}">${tr(x)}</button>`).join("")}</div></div>
-      <div class="full actions"><button class="btn" type="button" data-save="${s.id}">${tr("Save run")}</button>${log?`<button class="btn ghost" type="button" data-del="${s.id}">${tr("Delete entry")}</button>`:""}</div>
+      <div><label for="shoe-${s.id}">${tr("Shoes")}</label>
+        <select class="inp" id="shoe-${s.id}" data-sel="shoe"><option value="">–</option>${SHOES.map(([v,x])=>`<option value="${v}" ${shoeNow===v?"selected":""}>${tr(x)}</option>`).join("")}</select></div>
+      <div><label for="tod-${s.id}">${tr("Time of day")}</label>
+        <select class="inp" id="tod-${s.id}" data-sel="tod"><option value="">–</option>${TODS.map(([v,x])=>`<option value="${v}" ${l.tod===v?"selected":""}>${tr(x)}</option>`).join("")}</select></div>
+      <div class="full actions"><button class="btn" type="button" data-save="${s.id}">${tr("Save run")}</button>${log?`<button class="btn ghost" type="button" data-del="${s.id}">${tr("Delete entry")}</button>`:pd?`<button class="btn ghost" type="button" data-discardpend="${s.id}">${tr("Discard recording")}</button>`:""}</div>
       <p class="err full"></p>
     </div>`;
   } else {
@@ -1636,7 +1671,8 @@ function sessHTML(s, open){
     <div class="actions"><button class="btn ${done?"ghost":""}" type="button" data-kraft="${s.id}">${done?tr("Mark as open"):tr("Mark as done")}</button></div>`;
   }
   const custom = alt && !ALTS.includes(alt.what) ? alt.what : "";
-  body+=`<div class="alt"><label class="lb">${s.kind==="run"?tr("Didn't run? What did you do instead?"):tr("Did something else instead?")}</label>
+  // A logged run is not replaced by "something else": delete the entry or change the type under "Adjust session".
+  if(!log) body+=`<div class="alt"><label class="lb">${s.kind==="run"?tr("Didn't run? What did you do instead?"):tr("Did something else instead?")}</label>
     <div class="chips">${ALTS.map(a=>`<button type="button" class="chip" aria-pressed="${!!alt&&alt.what===a}" data-alt="${s.id}" data-v="${a}">${esc(tok(a))}</button>`).join("")}</div>
     <div class="row"><input class="inp" type="text" id="alt-${s.id}" placeholder="${esc(tr("Something else, e.g. football"))}" value="${esc(custom)}" maxlength="40" aria-label="${esc(tr("Other activity"))}"><button class="btn ghost" type="button" data-alt-other="${s.id}">${tr("Log")}</button></div>
     ${alt?`<button class="linkbtn" type="button" data-alt-clear="${s.id}">${tr("Back to plan")}</button>`:""}
@@ -1645,7 +1681,7 @@ function sessHTML(s, open){
     <button class="sess-head" type="button" aria-expanded="${open}" data-toggle="${s.id}">
       <span class="sess-day">${s.day}<small>${fmtDate(s.date)}</small></span>
       <span><span class="sess-title">${esc(s.t)}</span><br><span class="sess-sub">${sub}</span></span>
-      ${right || `<span class="dot">${done?"✓":""}</span>`}
+      <span class="sess-end">${right}<span class="dot">${done||alt?"✓":""}</span></span>
     </button>
     <div class="sess-body" ${open?"":"hidden"}>${body}</div>
   </div>`;
@@ -1701,9 +1737,10 @@ function renderPlan(){
     for(let w=ph.weeks[0]; w<=ph.weeks[1]; w++){
       const list=SESSIONS.filter(s=>s.week===w);
       const doneN=list.filter(s=>isDone(s)||state.alt[s.id]).length;
-      const rr=list.filter(x=>x.kind==="run"), a=rr[0], b=rr[1];
+      const part=x=>x.kind==="run" ? `${x.day} ${x.race?fmtKm(21.1)+" km":fmtMin(x.min)}` : `${x.day} ${tok(x.label)}`;
+      const main=list.filter(x=>/-(wed|sun)$/.test(x.id)).map(part).join(", ");
       rows+=`<details class="wk ${w===cw?"now":""}" data-week="${w}" ${openPlan.has(w)?"open":""}>
-        <summary><span class="wk-n">W${w}</span><span><b>${esc(weekTitle(w))}</b><br><span class="wk-d">${fmtDate(addDays(START,(w-1)*7))} · ${a.day} ${fmtMin(a.min)}, ${b.day} ${b.race?fmtKm(21.1)+" km":fmtMin(b.min)}</span></span><span class="wk-bar" role="img" aria-label="${esc(tr("{done} of {total} done",{done:doneN,total:list.length}))}"><i style="width:${list.length?doneN/list.length*100:0}%"></i></span></summary>
+        <summary><span class="wk-n">W${w}</span><span><b>${esc(weekTitle(w))}</b><br><span class="wk-d">${fmtDate(addDays(START,(w-1)*7))} · ${main}</span></span><span class="wk-bar" role="img" aria-label="${esc(tr("{done} of {total} done",{done:doneN,total:list.length}))}"><i style="width:${list.length?doneN/list.length*100:0}%"></i></span></summary>
         ${openPlan.has(w)?weekHTML(w):""}
       </details>`;
     }
@@ -2016,22 +2053,20 @@ function trkSave(){
   if(P){ try{ P.saveState({state:JSON.stringify(s)}).catch(()=>{}); }catch(e){} }
 }
 function newTrk(id, startedAt, native, extra){
-  const s=SESSIONS.find(x=>x.id===id);
-  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt), cue:-1, segs: s?HMTrk.parseSegments(s.d,s.min):[]}, extra||{});
+  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt), cue:-1, segs:[]}, extra||{});   // the tracker only tracks: no plan segments, no cues
   trkSave();
   clearInterval(trkTimer); trkTimer=setInterval(trkTick,1000);
 }
-const cueLabel = seg => segLabel(seg.label);
 
 async function trkBegin(id){
   const s=SESSIONS.find(x=>x.id===id); if(!s || trk) return;
-  const P=nativeTracker(), segs=HMTrk.parseSegments(s.d,s.min), cues=HMTrk.cuesFor(segs, cueLabel, tr("Done. Jog it out easy."));
+  const P=nativeTracker(), cues=[];   // plain recording: nothing is read from the plan, nothing vibrates
   const fail=code=>{
     hmlog("begin:fail "+(code||"unknown"));
     const m=$("#rMsg"); if(m) m.textContent=gpsErr(code);
     if(code==="RUNNING") trkRestore();   // the service is already running, so reattach to it
   };
-  hmlog("begin segs="+segs.length+" cues="+cues.length);
+  hmlog("begin free");
   try{
     if(P){
       let ps=await P.checkPermissions();
@@ -2066,17 +2101,9 @@ async function trkTick(){
       me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending;
     }
     me.an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, Date.now());
-    trkCues(me);
   }catch(e){}
   me.busy=false;
   if(trk===me) updateRun();
-}
-// Without a background service (browser) the page vibrates on each change itself.
-function trkCues(me){
-  if(me.native || me.paused || !me.segs.length) return;
-  const c=HMTrk.current(me.segs, me.an.active), i=c?c.i:me.segs.length;
-  if(me.cue>=0 && i!==me.cue){ try{ navigator.vibrate && navigator.vibrate(c&&c.seg.k==="work"?[250,120,250]:[600]); }catch(e){} }
-  me.cue=i;
 }
 async function trkPause(){
   if(!trk || trk.paused) return;
@@ -2091,7 +2118,6 @@ async function trkResume(){
   const P=trk.native&&nativeTracker(); if(P){ try{ await P.resume(); }catch(e){} }
   trkTick();
 }
-function trkLap(){ if(trk && !trk.paused){ trk.laps.push(Math.round(trk.an.active)); trkSave(); try{ navigator.vibrate&&navigator.vibrate(80); }catch(e){} updateRun(); } }
 
 async function trkEnd(){
   if(!trk) return;
@@ -2109,14 +2135,12 @@ async function trkEnd(){
     if(me.lock){ try{ me.lock.release(); }catch(e){} }
   }
   const an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, now);
-  const segs=me.segs.length?me.segs:(me.laps.length?HMTrk.lapSegs(me.laps,an.active):[]);
   const km=Math.round(an.dist/10)/100, sec=Math.round(an.active);
-  const iv=segs.length?HMTrk.intervals(an.pts,segs,an.active):[];
   const sp=HMTrk.splits(an.pts,an.active);
   const route=state.gps.save?HMTrk.buildRoute(an.pts,state.gps.zone).parts:null;
   const tail=sp.length&&sp[sp.length-1].part?[sp[sp.length-1].m,sp[sp.length-1].sec]:null;
   trkLast={id:me.id, km, sec, dist:an.dist, valid: km>=0.05 && sec>=30,
-    trk:{iv:iv.map(x=>[x.k,x.label,x.sec,x.m]), sp:sp.filter(x=>!x.part).map(x=>x.sec), tail, route:route&&route.length?route:null}};
+    trk:{iv:[], sp:sp.filter(x=>!x.part).map(x=>x.sec), tail, route:route&&route.length?route:null}};
   trk=null; trkSave(); runBar.hidden=true;
   showRun("sum");
 }
@@ -2193,11 +2217,11 @@ function showRun(view){
   trkView=view; runUI.hidden=false; runUI.classList.remove("work"); document.body.style.overflow="hidden";
   runBar.hidden=true;
   if(view==="ready"){
-    const s=SESSIONS.find(x=>x.id===runUI.dataset.id), segs=s?HMTrk.parseSegments(s.d,s.min):[];
+    const s=SESSIONS.find(x=>x.id===runUI.dataset.id);
     const z=state.gps.zone;
     runUI.innerHTML=`<div class="run-top"><span class="run-tag">${tr("Ready")}</span><button class="linkbtn" type="button" data-rclose>${tr("Cancel")}</button></div>
       <div class="run-label">${s?esc(s.t||tok(s.label)||tr("Run")):tr("Run")}</div>
-      <p class="note">${segs.length?tr("The app found {n} fast segments in the plan and signals every change by vibration. The screen may stay off.",{n:segs.filter(x=>x.k==="work").length}):tr("Free run. Use “Lap” to set your own marks.")}</p>
+      <p class="note">${tr("The app only records distance, time and route. The screen may stay off.")}</p>
       <p class="hint">${z?tr("Privacy zone: {z} around the start. Nothing is stored there, but distance and time still count.",{z:zoneText(z)}):tr("Privacy zone is off.")} ${state.gps.save?"":tr("The route won't be saved.")} ${tr("Everything stays on this device.")}</p>
       <p class="err" id="rMsg"></p>
       <div class="run-btns one"><button class="btn big" type="button" data-rstart>${tr("Start")}</button></div>`;
@@ -2209,7 +2233,7 @@ function showRun(view){
       <div class="run-time" id="rTime">0:00</div>
       <div class="run-grid"><div><b id="rDist">0${DEC()}00</b><span>km</span></div><div><b id="rPace">–</b><span>min/km</span></div></div>
       <p class="err" id="rMsg"></p>
-      <div class="run-btns"><button class="btn ghost big" type="button" data-rpause id="rPause">${tr("Pause")}</button><button class="btn ghost big" type="button" data-rlap>${tr("Lap")}</button><button class="btn big wide" type="button" data-rend>${tr("Finish")}</button></div>`;
+      <div class="run-btns"><button class="btn ghost big" type="button" data-rpause id="rPause">${tr("Pause")}</button><button class="btn big" type="button" data-rend>${tr("Finish")}</button></div>`;
     updateRun(); return;
   }
   if(view==="sum"){
@@ -2241,16 +2265,10 @@ function updateRun(){
   set("rDist", (Math.round(an.dist/10)/100).toFixed(2).replace(".",DEC()));
   const lp=HMTrk.livePace(an.pts, act);
   set("rPace", trk.paused||lp==null||lp>1800?"–":fmtPace(lp));
-  const c=trk.segs.length?HMTrk.current(trk.segs,act):null;
-  let label, sub="";
-  if(trk.segs.length){
-    if(c){ label=segLabel(c.seg.label); sub=tr("{t} left",{t:mmss(c.left)})+" · "+(c.next?tr("then {x}",{x:segLabel(c.next.label)}):tr("then finish")); }
-    else { label=tr("Plan done"); sub=tr("Jog it out easy, then finish."); }
-  } else { label=trk.laps.length?tr("Lap {n}",{n:trk.laps.length+1}):tr("Free run"); sub=trk.laps.length?tr("Last mark at {t}",{t:hhmmss(trk.laps[trk.laps.length-1])}):""; }
+  let label=tr("Recording"), sub="";
   if(trk.paused){ label=tr("Paused"); sub=tr("The clock is stopped."); }
   set("rLabel",label); set("rSub",sub);
   const pb=document.getElementById("rPause"); if(pb) pb.textContent=trk.paused?tr("Resume"):tr("Pause");
-  runUI.classList.toggle("work", !trk.paused && !!c && c.seg.k==="work");
   const lf=trk.fixes[trk.fixes.length-1], age=lf?(Date.now()-lf[0])/1000:null;
   let gt=tr("Searching for GPS …");
   if(lf){ gt = trk.paused?tr("Paused") : age>12?tr("No signal") : lf[3]>25?tr("GPS inaccurate (±{m} m)",{m:Math.round(lf[3])}):tr("GPS ok"); }
@@ -2408,15 +2426,18 @@ document.addEventListener("click", e=>{
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") document.querySelectorAll(".map.full").forEach(el=>mapFull(el,false)); });
 
-function trkHTML(r){
+/* Route and kilometer splits of a recording. In a session card (o.fold) they sit in a closed section so the card stays short.
+   Old recordings may still contain interval segments (r.iv). They stay stored but are not shown. */
+function trkHTML(r, o){
   if(!r) return "";
   const pace=(s,m)=>m>=20?fmtPace(s/m*1000):"–";
-  let out="";
   const lines=(r.route||[]).map(HMTrk.decode);
+  let out="";
   if(lines.length) out+=mapHTML([lines]);
-  if(r.iv&&r.iv.length) out+=`<table class="tbl"><thead><tr><th>${tr("Segment")}</th><th>${tr("Time")}</th><th>${tr("Meters")}</th><th>min/km</th></tr></thead><tbody>${r.iv.map(x=>`<tr class="${x[0]==="work"?"w":""}"><td>${esc(segLabel(x[1]))}</td><td>${mmss(x[2])}</td><td>${x[3]}</td><td>${pace(x[2],x[3])}</td></tr>`).join("")}</tbody></table>`;
   if((r.sp&&r.sp.length)||r.tail) out+=`<h3 class="mini">${tr("Kilometers")}</h3><div class="splits">${(r.sp||[]).map((s,i)=>`<div><b>${fmtPace(s)}</b><span>km ${i+1}</span></div>`).join("")}${r.tail?`<div><b>${pace(r.tail[1],r.tail[0])}</b><span>+${r.tail[0]} m</span></div>`:""}</div>`;
-  return out?`<div class="trkbox">${out}</div>`:"";
+  if(!out) return "";
+  const box=`<div class="trkbox">${out}</div>`;
+  return o&&o.fold ? `<details class="trkd"><summary>${tr("Route and kilometers")}</summary>${box}</details>` : box;
 }
 
 document.addEventListener("click", e=>{
@@ -2428,7 +2449,6 @@ document.addEventListener("click", e=>{
   if(!runUI.contains(t)) return;
   if(t.closest("[data-rstart]")) trkBegin(runUI.dataset.id);
   else if(t.closest("[data-rpause]")) (trk&&trk.paused?trkResume():trkPause());
-  else if(t.closest("[data-rlap]")) trkLap();
   else if(t.closest("[data-rend]")){ if(trk && trk.an.active<20 || confirm(tr("Finish the run?"))) trkEnd(); }
   else if(t.closest("[data-rclose]")) closeRun();
   else if(t.closest("[data-raccept]")) trkAccept();
@@ -2464,11 +2484,13 @@ document.addEventListener("click", e=>{
   const sv=t.closest("[data-save]");
   if(sv){
     const id=sv.dataset.save, form=sv.closest("[data-form]");
-    const km=parseKm(document.getElementById("km-"+id).value), sec=parseTime(document.getElementById("t-"+id).value);
+    // Read from this form, not by id: the current week can be on screen twice (This week and Plan).
+    const km=parseKm(form.querySelector('input[id^="km-"]').value), sec=parseTime(form.querySelector('input[id^="t-"]').value);
     const err=form.querySelector(".err");
+    const selVal=n=>{ const e=form.querySelector('[data-sel="'+n+'"]'); return e&&e.value?e.value:null; };
     if(!km){ err.textContent=tr("Enter the kilometers as a number, e.g. {x}.",{x:fmtKm(5.2)}); return; }
     if(!sec){ err.textContent=tr("Enter the time as mm:ss, e.g. 31:40, or as h:mm:ss."); return; }
-    const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:(()=>{const k=form.querySelector('[data-seg="knee"]');return k?segValue(k):null;})(),shoe:segValue(form.querySelector('[data-seg="shoe"]')),tod:segValue(form.querySelector('[data-seg="tod"]')),ts:Date.now()};
+    const entry={km,sec,feel:+segValue(form.querySelector('[data-seg="feel"]'))||null,knee:(()=>{const k=form.querySelector('[data-seg="knee"]');return k?segValue(k):null;})(),shoe:selVal("shoe"),tod:selVal("tod"),ts:Date.now()};
     if(pend && pend.id===id){ if(pend.trk) entry.trk=pend.trk; pend=null; lsSet(PEND_KEY,null); }
     const msg=praise(id, entry);
     const prevL=loggedRuns().filter(r=>r.id!==id).reduce((m,r)=>Math.max(m,r.log.km),0), rm=recLongest();
@@ -2476,7 +2498,22 @@ document.addEventListener("click", e=>{
     if(rm>0 && km>Math.max(prevL,rm)) addRecord({id:uid(),sport:"lauf",key:"longest",name:tr("Longest run"),value:fmtKm(km)+" km",date:dayKey(today),former:false,ts:Date.now()});
     persist(); openIds.delete(id); render(); toast(...msg); return;
   }
-  const del=t.closest("[data-del]"); if(del){ delete state.logs[del.dataset.del]; persist(); render(); return; }
+  const del=t.closest("[data-del]");
+  if(del){
+    const id=del.dataset.del;
+    if(!confirm(tr("Delete this run? The recorded route is deleted too."))) return;
+    const snap=snapshot();
+    delete state.logs[id]; persist(); openIds.delete(id); render();
+    toast(tr("Run deleted."),tr("The session is open again."),snap);
+    return;
+  }
+  const dp=t.closest("[data-discardpend]");
+  if(dp){
+    if(!confirm(tr("Discard this recording?"))) return;
+    pend=null; lsSet(PEND_KEY,null); render();
+    toast(tr("Recording discarded."),tr("Nothing was saved."));
+    return;
+  }
   const kr=t.closest("[data-kraft]");
   if(kr){
     const id=kr.dataset.kraft; delete state.alt[id];
@@ -2581,7 +2618,7 @@ $("#reset").addEventListener("click", ()=>{
 });
 
 /* ---------- Weekly overview per sport ---------- */
-const OVS = [["lauf","Running"],["boulder","Bouldering"],["kraft","Strength"],["cali","Calisthenics"],["stretch","Stretching"],["other","Other"]];
+const OVS = [["lauf","Running"],["boulder","Bouldering"],["kraft","Strength"],["cali","Calisthenics"],["stretch","Stretching"],["yoga","Yoga"],["workout","Workout"],["swim","Swimming"],["cycle","Cycling"],["other","Other"]];
 const ovName = k => { const x=OVS.find(o=>o[0]===k); return x?tr(x[1]):""; };
 let ovSport="lauf", ovSel=11;
 function sportOfLabel(x){
@@ -2590,6 +2627,10 @@ function sportOfLabel(x){
   if(/bould|kletter|climb/.test(x)) return "boulder";
   if(/calis/.test(x)) return "cali";
   if(/stretch|dehn|mobil/.test(x)) return "stretch";
+  if(/yoga/.test(x)) return "yoga";
+  if(/schwimm|swim/.test(x)) return "swim";
+  if(/^rad\b|cycl|bike|fahrrad|radfahr/.test(x)) return "cycle";
+  if(/workout/.test(x)) return "workout";
   if(/kraft|gym|strength/.test(x)) return "kraft";
   return "other";
 }
@@ -2695,9 +2736,10 @@ document.addEventListener("click", e=>{
 });
 
 /* ---------- Quick logging & adjusting sessions ---------- */
-const snapshot = () => JSON.stringify({strength:state.strength,alt:state.alt,edits:state.edits,workouts:state.workouts,dur:state.dur});
+const snapshot = () => JSON.stringify({logs:state.logs,strength:state.strength,alt:state.alt,edits:state.edits,workouts:state.workouts,dur:state.dur});
 function restoreSnapshot(snap){
   const o=JSON.parse(snap);
+  if(o.logs) state.logs=o.logs;
   state.strength=o.strength; state.alt=o.alt; state.edits=o.edits; state.workouts=o.workouts; state.dur=o.dur;
   applyProfile(); persist(); render();
 }
@@ -2739,21 +2781,24 @@ function quickRecord(label){
 }
 function editSheet(id){
   const s=SESSIONS.find(x=>x.id===id), b=BASE.find(x=>x.id===id); if(!s||!b) return;
-  const run=s.kind==="run", mon=addDays(START,(s.week-1)*7);
+  const mon=addDays(START,(s.week-1)*7);
   const baseOff=Math.round((b.date-mon)/DAY), nowOff=Math.round((s.date-mon)/DAY);
-  const dfl=lb=>lb===b.label?{t:b.t,d:b.d}:{t:tok(lb),d:genericText()};
-  let cur=run?null:s.label;
+  const baseSport=slotLabel(b), canType=!s.race;
+  const dfl=lb=>lb===baseSport?{t:b.t,d:b.d}:{t:tok(lb),d:lb==="Lauf"?runText():genericText()};
+  let cur=slotLabel(s);
+  const hasRun=!!state.logs[id];
   openSheet(`<h3>${tr("Adjust session")}</h3><p class="hint">${tr("Week {n}. The plan is a suggestion, you decide.",{n:s.week})}</p>
-    ${run?"":`<label class="lb">${tr("Type")}</label><div class="chips" id="eLabel">${DAYCHOICES.filter(c=>c!=="Aus").map(c=>`<button type="button" class="chip" data-el="${c}" aria-pressed="${s.label===c}">${esc(tok(c))}</button>`).join("")}</div>`}
+    ${canType?`<label class="lb">${tr("Type")}</label><div class="chips" id="eLabel">${SPORTCHOICES.map(c=>`<button type="button" class="chip" data-el="${c}" aria-pressed="${cur===c}">${esc(tok(c))}</button>`).join("")}</div>
+    <p class="hint" id="eKeep" ${hasRun&&cur!=="Lauf"?"":"hidden"}>${tr("Your logged run stays saved. It comes back if you switch to Run again.")}</p>`:""}
     <label class="lb" for="eT" style="margin-top:14px">${tr("Title")}</label><input class="inp" id="eT" type="text" maxlength="40" value="${esc(s.t)}">
     <label class="lb" for="eD" style="margin-top:14px">${tr("Description")}</label><textarea class="inp" id="eD" maxlength="400">${esc(s.d)}</textarea>
-    ${run&&!s.race?`<label class="lb" for="eM" style="margin-top:14px">${tr("Planned duration in minutes")}</label><input class="inp" id="eM" type="text" inputmode="numeric" value="${s.min}">`:""}
-    ${run?"":`<label class="lb" for="eDur" style="margin-top:14px">${tr("Duration in minutes (optional)")}</label><input class="inp" id="eDur" type="text" inputmode="numeric" value="${state.dur[id]||""}" placeholder="${esc(tr("e.g. {x}",{x:90}))}">`}
+    <div id="eMBox" ${cur==="Lauf"&&!s.race?"":"hidden"}><label class="lb" for="eM" style="margin-top:14px">${tr("Planned duration in minutes")}</label><input class="inp" id="eM" type="text" inputmode="numeric" value="${s.kind==="run"?s.min:30}"></div>
+    <div id="eDurBox" ${cur==="Lauf"?"hidden":""}><label class="lb" for="eDur" style="margin-top:14px">${tr("Duration in minutes (optional)")}</label><input class="inp" id="eDur" type="text" inputmode="numeric" value="${state.dur[id]||""}" placeholder="${esc(tr("e.g. {x}",{x:90}))}"></div>
     <label class="lb" style="margin-top:14px">${tr("Day")}</label>
     <div class="chips" id="eDay">${[0,1,2,3,4,5,6].map(i=>`<button type="button" class="chip" data-ed="${i}" aria-pressed="${i===nowOff}">${WD((i+1)%7)}</button>`).join("")}</div>
     <p class="err" id="eErr"></p>
     <div class="actions"><button class="btn" type="button" id="eSave">${tr("Save")}</button>${state.edits[id]?`<button class="btn ghost" type="button" id="eReset">${tr("Back to plan")}</button>`:""}<button class="btn ghost" type="button" data-close>${tr("Cancel")}</button></div>
-    ${run?"":`<button class="linkbtn" type="button" id="eSkip" style="margin-top:20px">${tr("Remove from this plan")}</button>`}`, "#eT");
+    ${b.kind==="run"?"":`<button class="linkbtn" type="button" id="eSkip" style="margin-top:20px">${tr("Remove from this plan")}</button>`}`, "#eT");
   pickChip($("#eDay"),"data-ed");
   const lab=$("#eLabel");
   if(lab){
@@ -2764,21 +2809,22 @@ function editSheet(id){
       if($("#eT").value.trim()===prev.t) $("#eT").value=nx.t;
       if($("#eD").value.trim()===prev.d) $("#eD").value=nx.d;
       cur=bt.dataset.el;
+      $("#eMBox").hidden=cur!=="Lauf"; $("#eDurBox").hidden=cur==="Lauf"; $("#eKeep").hidden=!(hasRun&&cur!=="Lauf");
     });
   }
   $("#eSave").onclick=()=>{
     const ti=$("#eT").value.trim(), d=$("#eD").value.trim(), er=$("#eErr");
     if(!ti){ er.textContent=tr("The title can't be empty."); return; }
-    const df=run?{t:b.t,d:b.d}:dfl(cur), ne={};
-    if(!run && cur!==b.label) ne.label=cur;
+    const isRun=cur==="Lauf", df=dfl(cur), prevEdit=state.edits[id]||{}, ne={};
+    if(canType && cur!==baseSport) ne.label=cur;
     if(ti!==df.t) ne.t=ti;
     if(d && d!==df.d) ne.d=d;
-    if(run && !s.race){
+    if(isRun && !s.race){
       const m=parseInt($("#eM").value,10);
       if(!(m>0&&m<=300)){ er.textContent=tr("The duration must be between 1 and 300 minutes."); return; }
-      if(m!==b.min) ne.min=m;
-    }
-    if(!run){
+      if(m!==(b.kind==="run"?b.min:30)) ne.min=m;
+    } else if(prevEdit.min) ne.min=prevEdit.min;   // keep the minutes while this session is another sport
+    if(!isRun){
       const raw=$("#eDur").value.trim(), n=parseInt(raw,10);
       if(raw && !(n>0&&n<=600)){ er.textContent=tr("The duration must be between 1 and 600 minutes."); return; }
       if(n>0) state.dur[id]=n; else delete state.dur[id];

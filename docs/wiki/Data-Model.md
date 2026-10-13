@@ -28,7 +28,7 @@ state = {
                lang: "en" | "de" },
   records:   [ { id, sport: "lauf"|"boulder"|"stretch"|"cali", key, name, value, date, former, ts } ],
   goals:     [ { id, sport: "allg"|"lauf"|"boulder"|"stretch"|"cali", text, due, done, ts } ],
-  workouts:  [ { id, sport: "boulder"|"kraft"|"cali"|"stretch"|"other", date, min, note, ts } ],
+  workouts:  [ { id, sport: "boulder"|"kraft"|"cali"|"stretch"|"yoga"|"workout"|"swim"|"cycle"|"other", date, min, note, ts } ],
   dur:       { "w3-tue": 75 },
   edits:     { "w3-wed": { t, d, min, off, label, skip } },
   gps:       { zone: 0|150|300|500|1000, save: true|false },
@@ -42,13 +42,13 @@ The app started German-only. Several values are therefore stored as short German
 
 | Field | Tokens | Shown in English as |
 |---|---|---|
-| `profile.mon/tue/fri`, `edits.label`, quick logging | `Kraft`, `Bouldern`, `Calisthenics`, `Stretching`, `Yoga`, `Schwimmen`, `Rad`, `Aus` | Strength, Bouldering, Calisthenics, Stretching, Yoga, Swimming, Cycling, Off |
+| `profile.mon/tue/fri`, `edits.label`, quick logging | `Kraft`, `Bouldern`, `Calisthenics`, `Stretching`, `Yoga`, `Schwimmen`, `Rad`, `Workout`, `Aus` (`edits.label` also `Lauf`) | Strength, Bouldering, Calisthenics, Stretching, Yoga, Swimming, Cycling, Workout, Off (Run) |
 | `alt.what` | `Sauna`, `Ruhetag`, `Schwimmen`, `Rad`, `Yoga`, `Krank` (or free text) | Sauna, Rest day, Swimming, Cycling, Yoga, Sick |
 | `logs.knee` | `gut`, `zieht`, `schmerzt` | all good, slight pull, hurts |
 | `logs.shoe` | `barfuss`, `normal` | barefoot shoes, regular shoes |
 | `logs.tod` | `morgen`, `mittag`, `abend`, `nacht` | morning, midday, evening, night |
 | `learnings.tag` | `Tempo`, `Ausrüstung`, `Ernährung`, `Erholung`, `Kopf`, `Sonstiges` (or the watched body part) | Pace, Gear, Nutrition, Recovery, Mind, Other |
-| sport keys | `lauf`, `boulder`, `kraft`, `cali`, `stretch`, `other`, `allg` | Running, Bouldering, Strength, … |
+| sport keys | `lauf`, `boulder`, `kraft`, `cali`, `stretch`, `yoga`, `workout`, `swim`, `cycle`, `other`, `allg` | Running, Bouldering, Strength, … |
 
 Free text the person typed (a custom activity, a note, a habit name) is stored and shown as typed.
 
@@ -75,7 +75,7 @@ The keys of `logs`, `strength`, `alt`, `dur` and `edits` are session IDs: `w` pl
 
 ```js
 trk = {
-  iv:    [ ["work"|"rest"|"easy"|"lap", "fast", seconds, meters], ... ],   // reached segments
+  iv:    [ ["work"|"rest"|"easy"|"lap", "fast", seconds, meters], ... ],   // always [] in new recordings; old ones keep theirs, but it isn't shown
   sp:    [ secondsPerKm, ... ],                                            // full kilometers
   tail:  [meters, seconds] | null,                                         // last, partial kilometer
   route: [ "<encoded line>", ... ] | null                                  // smoothed, without privacy zone
@@ -108,7 +108,7 @@ Changes lie **on top of** the plan and don't change it. Only changed fields are 
 | `d` | own description | up to 400 characters |
 | `min` | planned minutes | runs only, not the race, 1 to 300 |
 | `off` | weekday as offset from Monday | 0 to 6 |
-| `label` | another type | extra sessions only, a token from `DAYCHOICES` |
+| `label` | another type | any session except the race, a token from `SPORTCHOICES` (`DAYCHOICES` plus `Lauf`). A run slot with another label stops being a run, a non-run slot with `Lauf` becomes one. `logs[id]` is never deleted by this |
 | `skip` | removed from the plan | extra sessions only |
 
 A title or description is only stored when it differs from the plan's text in the current language. Typed text stays in the language it was typed in.

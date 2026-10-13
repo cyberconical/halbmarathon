@@ -10,7 +10,6 @@
 | “Searching for GPS …” takes long | Go under open sky and wait one or two minutes. The first fix takes longer after a long break. |
 | “GPS inaccurate” or “No signal” | Tall buildings, forest, underpasses. Inaccurate fixes don't count towards distance. |
 | “Too short” after finishing | Less than 50 m or 30 seconds recognized. Check location and reception. |
-| No vibration during intervals | The session description is not recognized as intervals (see [[Customizing the plan|Customizing-the-Plan]]) or vibration is off on the device. |
 | “The recording was ended” when opening | Android ended the app completely in the background. See below. |
 | “Service ended” on the run screen | The system ended the service. Tap “Finish” to keep the data so far. |
 | The map can't be moved | Drag inside the map frame, not beside it. To scroll the page, swipe outside the map. |
@@ -31,7 +30,7 @@ Some phone makers end apps in the background despite the foreground service. The
 
 Under Settings, Diagnostics, “View”. It contains only technical events and counters, no places and no data, see [[Privacy|Privacy]]. The number at the front is the time in seconds since the process started. It starts again at 0 for every new process, introduced by `proc:start`.
 
-### A normal run with intervals
+### A normal run
 
 Roughly what a run without problems looks like. The order within the same second can differ slightly.
 
@@ -39,7 +38,7 @@ Roughly what a run without problems looks like. The order within the same second
 +0s proc:start api=34
 +0s plugin:load
 +1s js:boot
-+42s js:begin segs=12 cues=12
++42s js:begin free
 +42s svc:create
 +42s svc:cmd running=1
 +42s svc:fg ok cues=12
