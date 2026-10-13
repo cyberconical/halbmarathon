@@ -79,7 +79,8 @@ Roughly what a run without problems looks like. The order within the same second
 | `drop old= paused= jump= still=` | points dropped as too old, during a pause, as a jump, or as standing still |
 | `speed doppler= slow(<0.5)= nospeed= max=` | points with a chip speed, how many read as standing, and the top speed |
 | `route save= zone= parts= pts= km=` | whether the route is saved, a privacy zone is set, and how much line is left |
-| `map:try`, `map:file`, `map:header`, `map:loaded ms=` | the basemap was attempted, the file was found, read, and drawn |
+| `map:try`, `map:file pieces`, `map:header`, `map:loaded ms=` | the basemap was attempted, the first 1 MB piece of the map was found, the header (with `sizeMB`) was read, and the map was drawn |
+| `map:live-ready inside=1`, `map:live-off`, `map:live-fail`, `map:live-err` | the live map during a recording: drawn on the Berlin map (`inside=1`) or a plain background (`0`); `off` or `fail` means no WebGL or no map file |
 | `map:nofile`, `map:nowebgl`, `map:outside`, `map:fail`, `map:err …`, `map:timeout` | why the plain line map is shown instead |
 
 The event words are fixed technical codes and don't change with the language setting.
