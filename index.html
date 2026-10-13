@@ -870,6 +870,21 @@ window.HM_I18N = { de: {
 "Test mode: inaccurate GPS": "Testmodus: ungenaues GPS",
 "Normally fixes with an error above 35 m are ignored. In test mode the app also records fixes up to {m} m. Distance and route are then less exact. For testing only, turn it off again afterwards.": "Normalerweise werden Messpunkte mit mehr als 35 m Fehler ignoriert. Im Testmodus zeichnet die App auch Punkte bis {m} m auf. Strecke und Route sind dann ungenauer. Nur zum Testen, danach wieder ausschalten.",
 "Test mode is on: GPS fixes up to {m} m error are recorded.": "Testmodus ist an: Messpunkte bis {m} m Fehler werden aufgezeichnet.",
+"Voice announcements": "Sprachansagen",
+"Every 500 m": "Alle 500 m",
+"Every 1 km": "Jeden Kilometer",
+"While recording, a voice says the distance, the pace of the last stretch and your average pace per kilometer. Always in English. It needs an English voice in the phone's text-to-speech settings. Music is turned down briefly, not stopped.": "Während der Aufzeichnung sagt eine Stimme die Strecke, das Tempo des letzten Abschnitts und dein Durchschnittstempo pro Kilometer an. Immer auf Englisch. Dafür braucht das Handy in den Einstellungen zur Sprachausgabe eine englische Stimme. Musik wird kurz leiser, nicht angehalten.",
+"Test voice": "Stimme testen",
+"Voice announcements only exist in the Android app.": "Sprachansagen gibt es nur in der Android-App.",
+"Voice announcements: every {d}, in English.": "Sprachansagen: alle {d}, auf Englisch.",
+"No English voice found, so there are no announcements. Install one in the Android text-to-speech settings.": "Keine englische Stimme gefunden, deshalb gibt es keine Ansagen. Installiere eine in den Android-Einstellungen zur Sprachausgabe.",
+"Text-to-speech is not available, so there are no announcements.": "Die Sprachausgabe ist nicht verfügbar, deshalb gibt es keine Ansagen.",
+"Voice test": "Stimmtest",
+"You should hear a sample announcement now.": "Du solltest jetzt eine Beispielansage hören.",
+"No English voice found.": "Keine englische Stimme gefunden.",
+"Install English voice data in the Android settings under Text-to-speech output.": "Installiere englische Sprachdaten in den Android-Einstellungen unter Sprachausgabe.",
+"No voice available.": "Keine Stimme verfügbar.",
+"Text-to-speech is not available on this phone.": "Auf diesem Handy ist keine Sprachausgabe verfügbar.",
 "Save run": "Lauf speichern",
 "Saved as an extra session.": "Als zusätzliche Einheit gespeichert.",
 "Saved automatically": "Wird automatisch gespeichert",
@@ -1106,46 +1121,65 @@ function current(segs, act){
   return null;
 }
 
-/* Raw fixes [time ms, lat, lon, accuracy m, speed m/s] -> cleaned points with active time and distance */
-function analyze(fixes, startMs, pauses, nowMs, opt){
+/* Raw fixes [time ms, lat, lon, accuracy m, speed m/s] -> cleaned points with active time and distance.
+   analyzer() works through the fixes once and can be fed again as new fixes arrive (live recording), so the cost
+   of a tick no longer grows with the length of the run. analyze() does the same in one go. Both give identical results.
+   The native service counts distance with the same rules for the voice announcements (PaceTracker.java). If you
+   change the rules here, change them there too. */
+function analyzer(startMs, opt){
   /* opt.maxAcc: fixes less accurate than this (metres) are dropped. Default 35. Test mode raises it.
      Above 35 m the movement thresholds grow with the reported accuracy, so GPS wobble is not counted as distance. */
   const maxAcc=(opt&&opt.maxAcc>35)?opt.maxAcc:35, loose=maxAcc>35;
-  const P=(pauses||[]).map(p=>({from:p.from,to:p.to==null?(nowMs||Infinity):p.to}));
-  const act=t=>{ let s=(t-startMs)/1000; for(const p of P){ if(t>p.from) s-=(Math.min(t,p.to)-p.from)/1000; } return s; };
-  const inPause=t=>P.some(p=>t>=p.from && t<p.to);
   /* Distance prefers the speed measured by the GPS chip (Doppler), which is far more precise than
      the distance between two noisy positions. Without it, the distance between points counts. */
-  const pts=[]; let anchor=null, last=null, lastT=-Infinity, dist=0, drops=0, wasPaused=false;
+  const pts=[]; let anchor=null, last=null, lastT=-Infinity, dist=0, drops=0, wasPaused=false, idx=0;
   const st={bad:0,old:0,paused:0,jump:0,still:0,dop:0,pos:0,a10:0,a20:0,a35:0,aX:0,sp0:0,spmax:0,limit:maxAcc};   // counters for the diagnostic log
-  for(const f of fixes){
-    const t=f[0], lat=f[1], lon=f[2], acc=f[3], sp=f[4];
-    if(!(t>lastT) || t<startMs-3000){ st.old++; continue; }
-    if(acc>maxAcc){ st.bad++; continue; }
-    if(acc<=10) st.a10++; else if(acc<=20) st.a20++; else if(acc<=35) st.a35++; else st.aX++;
-    const noisy=loose&&acc>35, minStep=noisy?acc:3;                      // with a big error, movement smaller than the error is noise
-    lastT=t;
-    if(inPause(t)){ wasPaused=true; st.paused++; continue; }
-    if(wasPaused){ anchor=null; last=null; wasPaused=false; }
-    const a=Math.max(0,act(t));
-    if(!anchor){ anchor={t,lat,lon,acc}; last={t,sp}; pts.push({a,d:dist,lat,lon,brk:true,t,acc}); drops=0; continue; }
-    const step=hav([anchor.lat,anchor.lon],[lat,lon]), dt=(t-anchor.t)/1000;
-    if(dt>0 && step/dt>9 && !(loose && step<=acc+(anchor.acc||0)) && drops<5){ drops++; st.jump++; continue; }      // outlier (jump); with loose accuracy a step within the error is no jump
-    drops=0;
-    const hasSp=sp>=0 && last.sp>=0, gap=(t-last.t)/1000;
-    if(hasSp && gap<=5){
-      const v0=last.sp<0.5?0:last.sp, v1=sp<0.5?0:sp; st.dop++; if(sp<0.5) st.sp0++; if(sp>st.spmax) st.spmax=sp;
-      dist+=(v0+v1)/2*gap;
-      last={t,sp};
-      if(step>=minStep || dt>=8){ anchor={t,lat,lon,acc}; pts.push({a,d:dist,lat,lon,brk:false,t,acc}); }
-    } else {
-      last={t,sp};
-      if(step<minStep && (dt<8||noisy)){ st.still++; continue; }       // standing still / noise (with a big error the point only moves once the step is bigger than the error)
-      dist+=noisy?Math.max(0,step-acc):step; anchor={t,lat,lon,acc}; pts.push({a,d:dist,lat,lon,brk:false,t,acc});   // with a big error, take off the expected error from each step
+  const mk=(pauses,nowMs)=>{
+    const P=(pauses||[]).map(p=>({from:p.from,to:p.to==null?(nowMs||Infinity):p.to}));
+    return {P, act:t=>{ let s=(t-startMs)/1000; for(const p of P){ if(t>p.from) s-=(Math.min(t,p.to)-p.from)/1000; } return s; }};
+  };
+  /* Processes the fixes that were added to the list since the last call. The list may only grow. */
+  function feed(fixes, pauses, nowMs){
+    const {P, act}=mk(pauses,nowMs);
+    const inPause=t=>P.some(p=>t>=p.from && t<p.to);
+    for(; idx<fixes.length; idx++){
+      const f=fixes[idx];
+      const t=f[0], lat=f[1], lon=f[2], acc=f[3], sp=f[4];
+      if(!(t>lastT) || t<startMs-3000){ st.old++; continue; }
+      if(acc>maxAcc){ st.bad++; continue; }
+      if(acc<=10) st.a10++; else if(acc<=20) st.a20++; else if(acc<=35) st.a35++; else st.aX++;
+      const noisy=loose&&acc>35, minStep=noisy?acc:3;                      // with a big error, movement smaller than the error is noise
+      lastT=t;
+      if(inPause(t)){ wasPaused=true; st.paused++; continue; }
+      if(wasPaused){ anchor=null; last=null; wasPaused=false; }
+      const a=Math.max(0,act(t));
+      if(!anchor){ anchor={t,lat,lon,acc}; last={t,sp}; pts.push({a,d:dist,lat,lon,brk:true,t,acc}); drops=0; continue; }
+      const step=hav([anchor.lat,anchor.lon],[lat,lon]), dt=(t-anchor.t)/1000;
+      if(dt>0 && step/dt>9 && !(loose && step<=acc+(anchor.acc||0)) && drops<5){ drops++; st.jump++; continue; }      // outlier (jump); with loose accuracy a step within the error is no jump
+      drops=0;
+      const hasSp=sp>=0 && last.sp>=0, gap=(t-last.t)/1000;
+      if(hasSp && gap<=5){
+        const v0=last.sp<0.5?0:last.sp, v1=sp<0.5?0:sp; st.dop++; if(sp<0.5) st.sp0++; if(sp>st.spmax) st.spmax=sp;
+        dist+=(v0+v1)/2*gap;
+        last={t,sp};
+        if(step>=minStep || dt>=8){ anchor={t,lat,lon,acc}; pts.push({a,d:dist,lat,lon,brk:false,t,acc}); }
+      } else {
+        last={t,sp};
+        if(step<minStep && (dt<8||noisy)){ st.still++; continue; }       // standing still / noise (with a big error the point only moves once the step is bigger than the error)
+        dist+=noisy?Math.max(0,step-acc):step; anchor={t,lat,lon,acc}; pts.push({a,d:dist,lat,lon,brk:false,t,acc});   // with a big error, take off the expected error from each step
+      }
     }
   }
-  const total=Math.max(0, nowMs==null?(pts.length?pts[pts.length-1].a:0):act(nowMs));
-  return {pts, dist, active:total, st};
+  /* The current state. pts and st are the analyzer's own lists, they keep growing, don't change them. */
+  function result(pauses, nowMs){
+    const {act}=mk(pauses,nowMs);
+    const total=Math.max(0, nowMs==null?(pts.length?pts[pts.length-1].a:0):act(nowMs));
+    return {pts, dist, active:total, st};
+  }
+  return {feed, result};
+}
+function analyze(fixes, startMs, pauses, nowMs, opt){
+  const az=analyzer(startMs,opt); az.feed(fixes,pauses,nowMs); return az.result(pauses,nowMs);
 }
 
 function distAt(pts, a){
@@ -1278,7 +1312,7 @@ function buildRoute(pts, zoneM, rand){
   return {parts};
 }
 
-root.HMTrk={hav,parseSegments,cuesFor,current,analyze,distAt,intervals,lapSegs,splits,livePace,smoothTrack,simplify,encode,decode,buildRoute};
+root.HMTrk={hav,parseSegments,cuesFor,current,analyzer,analyze,distAt,intervals,lapSegs,splits,livePace,smoothTrack,simplify,encode,decode,buildRoute};
 })(typeof window!=="undefined"?window:globalThis);
 </script>
 <script id="app">
@@ -1575,7 +1609,7 @@ function normalize(x){
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
-    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false), test: !!(x.gps && x.gps.test===true) },
+    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false), test: !!(x.gps && x.gps.test===true), voice: [0,500,1000].includes(x.gps&&x.gps.voice) ? x.gps.voice : 0 },
     updatedAt: x.updatedAt||0
   };
 }
@@ -2087,7 +2121,8 @@ function trkSave(){
   if(P){ try{ P.saveState({state:JSON.stringify(s)}).catch(()=>{}); }catch(e){} }
 }
 function newTrk(id, startedAt, native, extra){
-  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt,accOpt()), cue:-1, segs:[]}, extra||{});   // the tracker only tracks: no plan segments, no cues
+  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, az:null, an:null, cue:-1, segs:[]}, extra||{});
+  trk.az=HMTrk.analyzer(startedAt,accOpt()); trk.an=trk.az.result([],startedAt);   // the tracker only tracks: no plan segments, no cues
   trkSave();
   clearInterval(trkTimer); trkTimer=setInterval(trkTick,1000);
 }
@@ -2107,7 +2142,7 @@ async function trkBegin(id){
       if(ps.location!=="granted") ps=await P.requestPermissions({permissions:["location"]});
       if(ps.location!=="granted"){ fail("PERMISSION"); return; }
       if(ps.notifications && ps.notifications!=="granted"){ try{ await P.requestPermissions({permissions:["notifications"]}); }catch(e){} }
-      const r=await P.start({cues:JSON.stringify(cues), meta:id, lang:LANG});
+      const r=await P.start({cues:JSON.stringify(cues), meta:id, lang:LANG, voice:state.gps.voice, maxAcc:accOpt().maxAcc});
       newTrk(id, r.startedAt||Date.now(), true);
       hmlog("begin:ok");
     } else {
@@ -2132,12 +2167,14 @@ async function trkTick(){
     if(P){
       const r=await P.getFixes({from:me.next});
       if(r.fixes && r.fixes.length) for(const f of r.fixes) me.fixes.push(f);
-      me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending;
+      me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending; me.voice=r.voice;
     }
-    me.an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, Date.now(), accOpt());
+    const now=Date.now();
+    me.az.feed(me.fixes, me.pauses, now);          // only the fixes since the last tick
+    me.an=me.az.result(me.pauses, now);
   }catch(e){}
   me.busy=false;
-  if(trk===me) updateRun();
+  if(trk===me && !document.hidden) updateRun();    // screen off: nothing to draw, the visibility handler catches up
 }
 async function trkPause(){
   if(!trk || trk.paused) return;
@@ -2250,6 +2287,16 @@ async function diagShare(){
   }catch(e){ if(!/cancel/i.test(String((e&&e.message)||e))) toast(tr("That didn't work."),tr("The log could not be shared.")); }
 }
 
+/* Plays a sample announcement, so the person can check the voice and the volume. */
+async function voiceTest(){
+  const P=nativeTracker(); if(!P || !P.testVoice) return;
+  try{ await P.testVoice(); toast(tr("Voice test"),tr("You should hear a sample announcement now.")); }
+  catch(e){
+    if(e && e.code==="NO_ENGLISH") toast(tr("No English voice found."),tr("Install English voice data in the Android settings under Text-to-speech output."));
+    else toast(tr("No voice available."),tr("Text-to-speech is not available on this phone."));
+  }
+}
+
 /* ---------- Run screens ---------- */
 const zoneText = z => z>=1000 ? "1 km" : z+" m";
 function showRun(view){
@@ -2264,6 +2311,7 @@ function showRun(view){
       <p class="note">${tr("The app only records distance, time and route. The screen may stay off.")}</p>
       <p class="hint">${z?tr("Privacy zone: {z} around the start. Nothing is stored there, but distance and time still count.",{z:zoneText(z)}):tr("Privacy zone is off.")} ${state.gps.save?"":tr("The route won't be saved.")} ${tr("Everything stays on this device.")}</p>
       ${state.gps.test?`<p class="hint">${tr("Test mode is on: GPS fixes up to {m} m error are recorded.",{m:TEST_ACC})}</p>`:""}
+      ${state.gps.voice&&nativeTracker()?`<p class="hint">${tr("Voice announcements: every {d}, in English.",{d:zoneText(state.gps.voice)})}</p>`:""}
       <p class="err" id="rMsg"></p>
       <div class="run-btns one"><button class="btn big" type="button" data-rstart>${tr("Start")}</button></div>`;
     return;
@@ -2316,7 +2364,8 @@ function updateRun(){
   if(lf){ gt = trk.paused?tr("Paused") : age>12?tr("No signal") : lf[3]>25?tr("GPS inaccurate (±{m} m)",{m:Math.round(lf[3])}):tr("GPS ok"); }
   if(trk.dead) gt=tr("Service ended");
   set("rGps", gt);
-  const m=document.getElementById("rMsg"); if(m) m.textContent = trk.dead?tr("The system ended the recording. Finish the run to keep the data so far."):(trk.geoErr?tr("Location is not being shared."):"");
+  const vm=trk.voice==="no_english"?tr("No English voice found, so there are no announcements. Install one in the Android text-to-speech settings."):trk.voice==="unavailable"?tr("Text-to-speech is not available, so there are no announcements."):"";
+  const m=document.getElementById("rMsg"); if(m) m.textContent = trk.dead?tr("The system ended the recording. Finish the run to keep the data so far."):(trk.geoErr?tr("Location is not being shared."):vm);
   liveMapUpdate();
 }
 
@@ -2541,17 +2590,22 @@ function glDrop(el){
    Shows up with the first fix, even a single inaccurate one: a dot for the position, a circle for the reported
    error, and the cleaned track as it grows. Follows the position until the map is dragged; the third button
    centres it again. Outside the Berlin map (or without the map file) the same view is drawn on a plain background. */
-const LIVE = { map:null, el:null, follow:true, n:-1, busy:false, off:false };
-function liveMapDrop(){ if(LIVE.map){ try{ LIVE.map.remove(); }catch(e){} } LIVE.map=null; LIVE.el=null; LIVE.follow=true; LIVE.n=-1; LIVE.busy=false; LIVE.off=false; }
+const LIVE = { map:null, el:null, follow:true, n:-1, busy:false, off:false, parts:[], cur:null, pi:0, sent:-1, tTrail:0 };
+function liveMapDrop(){ if(LIVE.map){ try{ LIVE.map.remove(); }catch(e){} } LIVE.map=null; LIVE.el=null; LIVE.follow=true; LIVE.n=-1; LIVE.busy=false; LIVE.off=false; LIVE.parts=[]; LIVE.cur=null; LIVE.pi=0; LIVE.sent=-1; LIVE.tTrail=0; }
 const liveStyle = () => ({ version:8, sources:{}, layers:[{id:"bg",type:"background",paint:{"background-color":glDark()?"#2b2d33":"#eceae3"}}] });
 function circleGeo(lat,lon,r){ const c=[], k=Math.cos(lat*Math.PI/180); for(let i=0;i<=40;i++){ const a=i/40*2*Math.PI; c.push([lon+Math.sin(a)*r/(MPD*k), lat+Math.cos(a)*r/MPD]); } return {type:"Feature",properties:{},geometry:{type:"Polygon",coordinates:[c]}}; }
 function liveMapPaint(lf){
   const m=LIVE.map; if(!m || !m.getSource("me") || !trk) return;
-  const lat=lf[1], lon=lf[2], acc=lf[3]>0?Math.min(lf[3],300):0, parts=[]; let cur=null;
-  for(const p of trk.an.pts){ if(p.brk||!cur){ cur=[]; parts.push(cur); } cur.push([p.lon,p.lat]); }
+  const lat=lf[1], lon=lf[2], acc=lf[3]>0?Math.min(lf[3],300):0, pts=trk.an.pts;
+  // the line is extended by the new points only, and handed to the map at most every 3 s (it is re-tiled as a whole each time)
+  for(; LIVE.pi<pts.length; LIVE.pi++){ const p=pts[LIVE.pi]; if(p.brk||!LIVE.cur){ LIVE.cur=[]; LIVE.parts.push(LIVE.cur); } LIVE.cur.push([p.lon,p.lat]); }
   m.getSource("me").setData({type:"Feature",properties:{},geometry:{type:"Point",coordinates:[lon,lat]}});
   m.getSource("acc").setData(acc>=5?circleGeo(lat,lon,acc):{type:"FeatureCollection",features:[]});
-  m.getSource("trail").setData({type:"Feature",properties:{},geometry:{type:"MultiLineString",coordinates:parts.filter(l=>l.length>1)}});
+  const now=Date.now();
+  if(LIVE.pi!==LIVE.sent && now-LIVE.tTrail>=3000){
+    m.getSource("trail").setData({type:"Feature",properties:{},geometry:{type:"MultiLineString",coordinates:LIVE.parts.filter(l=>l.length>1)}});
+    LIVE.sent=LIVE.pi; LIVE.tTrail=now;
+  }
   if(LIVE.follow) m.easeTo({center:[lon,lat],duration:500});
 }
 async function liveMapCreate(el,lf){
@@ -2590,7 +2644,7 @@ async function liveMapCreate(el,lf){
 }
 function liveMapUpdate(){
   const el=document.getElementById("rMap");
-  if(!el || !trk || trkView!=="live" || LIVE.off) return;
+  if(!el || !trk || trkView!=="live" || LIVE.off || document.hidden) return;   // no drawing while the screen is off
   const lf=trk.fixes[trk.fixes.length-1];
   if(!lf){ el.hidden=true; return; }                          // no fix yet: nothing to show
   if(LIVE.el && LIVE.el!==el) liveMapDrop();                  // the screen was rebuilt
@@ -3211,6 +3265,11 @@ function renderSettings(){
         <div class="full"><label>${tr("Test mode: inaccurate GPS")}</label>
           ${chipRow([[true,tr("On")],[false,tr("Off")]], state.gps.test, "data-gtest")}
           <p class="hint">${tr("Normally fixes with an error above 35 m are ignored. In test mode the app also records fixes up to {m} m. Distance and route are then less exact. For testing only, turn it off again afterwards.",{m:TEST_ACC})}</p></div>
+        ${nativeTracker()?`<div class="full"><label>${tr("Voice announcements")}</label>
+          ${chipRow([[0,tr("Off")],[500,tr("Every 500 m")],[1000,tr("Every 1 km")]], state.gps.voice, "data-gvoice")}
+          <p class="hint">${tr("While recording, a voice says the distance, the pace of the last stretch and your average pace per kilometer. Always in English. It needs an English voice in the phone's text-to-speech settings. Music is turned down briefly, not stopped.")}</p>
+          <div class="chips"><button type="button" class="chip" data-vtest>${tr("Test voice")}</button></div></div>`
+        :`<div class="full"><label>${tr("Voice announcements")}</label><p class="hint">${tr("Voice announcements only exist in the Android app.")}</p></div>`}
       </div>
     </section>
     <section>
@@ -3319,6 +3378,9 @@ document.addEventListener("click", e=>{
   if(gz){ state.gps.zone=+gz.dataset.gzone; persist(); renderSettings(); return; }
   const gt=t.closest("[data-gtest]");
   if(gt){ state.gps.test=gt.dataset.gtest==="true"; persist(); renderSettings(); return; }
+  const gv=t.closest("[data-gvoice]");
+  if(gv){ state.gps.voice=+gv.dataset.gvoice; persist(); renderSettings(); return; }
+  if(t.closest("[data-vtest]")){ voiceTest(); return; }
   const gs=t.closest("[data-gsave]");
   if(gs){ state.gps.save=gs.dataset.gsave==="true"; persist(); renderSettings(); return; }
   const dl=t.closest("[data-dlog]");

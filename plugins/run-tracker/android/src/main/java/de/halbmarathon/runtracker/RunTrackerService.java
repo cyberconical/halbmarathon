@@ -51,6 +51,12 @@ public class RunTrackerService extends Service implements LocationListener {
     static volatile String appState = "";
     // Language of the app ("en" or "de") for the notification texts.
     static volatile String lang = "en";
+    // Voice announcements: distance between two announcements in metres (0 = off) and the error up to which a
+    // fix counts (35, or more in test mode). The spoken text is always English.
+    static volatile int voiceStepM = 0;
+    static volatile double voiceMaxAcc = 35;
+    // "off", or the state of the speech engine: init, ready, no_english, unavailable (see Announcer).
+    static volatile String voiceStatus = "off";
     static volatile RunTrackerService instance = null;
 
     private static class Cue {
@@ -67,13 +73,17 @@ public class RunTrackerService extends Service implements LocationListener {
     private long activeBaseMs = 0;
     private long lastResumeRt = 0;
     private String notificationText = "";
+    private Announcer announcer;
+    private PaceTracker pace;
+    private int announceCount = 0;
+    private double lastActiveSec = 0;
 
     static String txt(String en, String de) {
         return "de".equals(lang) ? de : en;
     }
 
     /** Called by the plugin before the service starts. */
-    static void prepare(String cues, String metaData, String language) {
+    static void prepare(String cues, String metaData, String language, int voiceStep, double maxAccM) {
         synchronized (LOCK) {
             FIXES.clear();
         }
@@ -82,6 +92,9 @@ public class RunTrackerService extends Service implements LocationListener {
         startedAt = System.currentTimeMillis();
         appState = "";
         lang = "de".equals(language) ? "de" : "en";
+        voiceStepM = (voiceStep == 500 || voiceStep == 1000) ? voiceStep : 0;
+        voiceMaxAcc = (maxAccM >= 35 && maxAccM <= 200) ? maxAccM : 35;
+        voiceStatus = voiceStepM > 0 ? Announcer.INIT : "off";
         paused = false;
         gpsOn = true;
         running = true;
@@ -226,6 +239,54 @@ public class RunTrackerService extends Service implements LocationListener {
             }
         }
         scheduleCues();
+        startVoice();
+    }
+
+    /** Voice announcements are optional. If anything goes wrong here the recording continues without them. */
+    private void startVoice() {
+        announceCount = 0;
+        lastActiveSec = 0;
+        if (voiceStepM <= 0) return;
+        try {
+            pace = new PaceTracker(voiceMaxAcc, voiceStepM, startedAt);
+            announcer = new Announcer(this, false, new Announcer.StatusListener() {
+                @Override
+                public void onStatus(String status) {
+                    voiceStatus = status;
+                }
+            });
+            RunLog.add("svc:voice step=" + voiceStepM + " maxacc=" + Math.round(voiceMaxAcc));
+        } catch (Throwable t) {
+            pace = null;
+            announcer = null;
+            voiceStatus = Announcer.UNAVAILABLE;
+            RunLog.add("svc:voice fail " + RunLog.describe(t));
+        }
+    }
+
+    private void stopVoice() {
+        pace = null;
+        if (announcer != null) {
+            announcer.shutdown();
+            announcer = null;
+        }
+        voiceStatus = "off";
+    }
+
+    /** Feeds one fix to the distance counter and speaks when a mark is crossed. Only while recording, not while paused. */
+    private void announceFix(Location l) {
+        long age = Math.max(0, SystemClock.elapsedRealtime() - l.getElapsedRealtimeNanos() / 1000000L);
+        double act = Math.max(lastActiveSec, (activeNowMs() - age) / 1000.0);
+        lastActiveSec = act;
+        PaceTracker.Mark m = pace.onFix(
+            l.getTime(), l.getLatitude(), l.getLongitude(),
+            l.hasAccuracy() ? l.getAccuracy() : -1,
+            l.hasSpeed() ? l.getSpeed() : -1,
+            act);
+        if (m == null) return;
+        announceCount++;
+        announcer.speak(PaceSpeech.text(m.meters, m.splitSec, voiceStepM, m.totalSec, announceCount == 1));
+        RunLog.add("voice:say n=" + announceCount);
     }
 
     private void fail() {
@@ -247,6 +308,7 @@ public class RunTrackerService extends Service implements LocationListener {
         if (!running || !paused) return;
         paused = false;
         lastResumeRt = SystemClock.elapsedRealtime();
+        if (pace != null) pace.resumed();      // nothing is counted for the time of the pause
         scheduleCues();
         RunLog.add("svc:resume");
     }
@@ -267,6 +329,7 @@ public class RunTrackerService extends Service implements LocationListener {
     }
 
     private void releaseResources() {
+        stopVoice();
         if (locationManager != null) {
             try {
                 locationManager.removeUpdates(this);
@@ -436,6 +499,15 @@ public class RunTrackerService extends Service implements LocationListener {
         else if (n % 500 == 0) RunLog.add("fix:n=" + n);
         if (!gpsOn) RunLog.add("gps:back");
         gpsOn = true;
+        if (pace != null && announcer != null && !paused) {
+            try {
+                announceFix(l);
+            } catch (Throwable t) {
+                // A problem with the voice must never stop the recording.
+                RunLog.add("voice:error " + RunLog.describe(t));
+                stopVoice();
+            }
+        }
     }
 
     @Override
