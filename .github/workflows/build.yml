@@ -25,9 +25,26 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Berlin basemap (offline map file)
+        continue-on-error: true
+        run: |
+          # Cut a small Berlin extract out of the daily Protomaps OpenStreetMap build.
+          # If this fails the app still works: it falls back to the plain line map.
+          mkdir -p basemap && cd basemap
+          url=$(curl -sSL https://api.github.com/repos/protomaps/go-pmtiles/releases/latest | grep -o 'https[^"]*Linux_x86_64.tar.gz' | head -1)
+          curl -sSL -o pm.tgz "$url"
+          tar xzf pm.tgz pmtiles
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            d=$(date -u -d "-$i day" +%Y%m%d)
+            if ./pmtiles extract "https://build.protomaps.com/$d.pmtiles" berlin.pmtiles --bbox=12.95,52.30,13.85,52.72 --maxzoom=14; then break; fi
+            rm -f berlin.pmtiles
+          done
+          ls -l berlin.pmtiles
+
       - name: Prepare project
         run: |
-          mkdir www && cp index.html www/ && cp -r fonts www/
+          mkdir www && cp index.html www/ && cp -r fonts map www/
+          if [ -f basemap/berlin.pmtiles ]; then cp basemap/berlin.pmtiles www/map/; else echo 'No basemap file, using the line map'; fi
           npm init -y
           npm install @capacitor/core@6 @capacitor/android@6 @capacitor/filesystem@6 @capacitor/share@6
           npm install -D @capacitor/cli@6

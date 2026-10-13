@@ -27,7 +27,7 @@ Around the starting point lies an area whose points are **never stored**. Distan
 
 ## Map and route
 
-The route appears as a map in the summary, in the logged run and, overlaid, in the stats. **No map tiles are loaded**; the app calls no servers. What you see is your line, drawn to scale.
+The route appears as a map in the summary, in the logged run and, overlaid, in the stats. **No map tiles are downloaded**; the app calls no servers. A Berlin basemap (OpenStreetMap data) ships inside the app; for routes outside Berlin you see just your line, drawn to scale.
 
 | Gesture | Effect |
 |---|---|
