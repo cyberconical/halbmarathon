@@ -5,7 +5,7 @@ The app is built so that it **cannot send anything you don't share yourself**. T
 ## Principles
 
 - All entries live in the app's private storage. There is no server and no account.
-- The app calls no servers. It uses no Google services, no ads and no trackers. The font ships with the app. The map is drawn from your own route; no map tiles are downloaded.
+- The app calls no servers. It uses no Google services, no ads and no trackers. The font ships with the app. The map shows your own route on a Berlin basemap that ships inside the app; no map tiles are downloaded.
 - Location is used only during a recording and never sent. The app reads the device's GPS directly (Android `LocationManager`), not Google's location services.
 - Android does not back up the app data to the cloud. Your entries only leave the device if you share a backup or a log yourself.
 

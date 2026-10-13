@@ -33,7 +33,7 @@ flowchart TB
   GH["GitHub Actions<br/>builds, checks, signs"] -. APK .-> Device
 ```
 
-There is **no connection to the outside**: no server, no map tiles, no web fonts, no Google services.
+There is **no connection to the outside**: no server, no map downloads (the Berlin basemap ships inside the app), no web fonts, no Google services.
 
 ## Building blocks
 

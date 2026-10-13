@@ -8,7 +8,7 @@ Kilometers, runs, average pace, fastest pace, longest run, total running time, �
 
 ## Charts
 
-- **Your routes**: all recorded routes on top of each other, as an interactive map (drag, pinch, + and −, full screen). Shown are the routes near the most recent one, so a holiday route doesn't stretch the map. No map tiles are loaded; it is a drawn line. See [[GPS recording|GPS-Recording]], “Map and route”.
+- **Your routes**: all recorded routes on top of each other, as an interactive map (drag, pinch, + and −, full screen). Shown are the routes near the most recent one, so a holiday route doesn't stretch the map. The basemap is bundled in the app; nothing is loaded from the network. See [[GPS recording|GPS-Recording]], “Map and route”.
 - **Kilometers per week** across all 27 weeks; the current week is marked.
 - **Pace per run** with your goal pace as a dashed line. It appears after two runs.
 - **Trend of the watched body part**: one box per run (all good, slight pull, hurts or no answer). It is named after your body part, for example “Knee trend”.

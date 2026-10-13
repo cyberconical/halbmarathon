@@ -156,6 +156,20 @@ select.inp{ font-size:16px; font-weight:600; padding:10px 8px; appearance:auto; 
 .map-scale{ position:absolute; left:10px; bottom:8px; display:flex; align-items:flex-end; gap:6px; font-size:12px; font-weight:600; pointer-events:none; }
 .map.full .map-scale{ bottom:calc(env(safe-area-inset-bottom,0px) + 12px); }
 .map-scale i{ display:block; height:8px; border:2px solid var(--fg); border-top:0; }
+/* Map with a real basemap behind the route (see "Offline basemap" in the script) */
+.map.gl{ border:0; border-radius:20px; box-shadow:0 2px 14px rgba(0,0,0,.2); background:#e9e6df; }
+.map.gl.full{ border-radius:0; }
+.map.gl > svg, .map.gl .map-scale{ display:none; }
+.map.gl .gl-host{ position:absolute !important; inset:0; }
+.map.gl .map-ctl{ z-index:5; gap:8px; top:10px; right:10px; }
+.map.gl .map-ctl button{ width:40px; height:40px; border:0; border-radius:50%; background:#fff; color:#1c1c1e; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.map.gl .maplibregl-ctrl-attrib{ font-size:10px; background:rgba(255,255,255,.7); }
+.map.gl .maplibregl-ctrl-scale{ font-size:10px; background:rgba(255,255,255,.7); }
+.gl-pin{ width:20px; height:20px; border-radius:50%; border:3px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.45); }
+.gl-pin.start{ background:#30c15b; }
+.gl-pin.finish{ width:26px; height:26px; border-width:2px; background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/13px 13px; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .map.gl .map-ctl button{ background:#2c2c2e; color:#fff; } :root:not([data-theme="light"]) .map.gl .maplibregl-ctrl-attrib{ background:rgba(0,0,0,.55); color:#ddd; } :root:not([data-theme="light"]) .map.gl .maplibregl-ctrl-attrib a{ color:#ddd; } :root:not([data-theme="light"]) .map.gl .maplibregl-ctrl-scale{ background:rgba(0,0,0,.55); color:#ddd; border-color:#ddd; } }
+:root[data-theme="dark"] .map.gl .map-ctl button{ background:#2c2c2e; color:#fff; }
 .tbl{ width:100%; border-collapse:collapse; margin:10px 0; font-variant-numeric:tabular-nums; font-size:15px; }
 .tbl th{ text-align:right; font-weight:400; font-size:12px; color:var(--mute); padding:4px 4px; border-bottom:2px solid var(--fg); }
 .tbl td{ text-align:right; padding:7px 4px; border-bottom:1px solid var(--line); }
@@ -2312,7 +2326,8 @@ function mapHTML(runs, o){
   const paths=runs.map(parts=>{ const d=parts.filter(l=>l.length>1).map(l=>curvePath(l.map(XY))).join(""); return d?`<path d="${d}" fill="none" stroke="var(--fg)" stroke-width="${o.overlay?3:4}" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="${o.overlay?0.45:1}"/>`:""; }).join("");
   const pad=Math.max(40,(b[2]-b[0])*0.08,(b[3]-b[1])*0.08), vw=Math.max(b[2]-b[0],300)+2*pad, vh=Math.max(b[3]-b[1],300)+2*pad;
   const vx=(b[0]+b[2])/2-vw/2, vy=(b[1]+b[3])/2-vh/2;
-  return `<div class="map" data-b="${b.map(v=>v.toFixed(1)).join(",")}">
+  const gid="g"+(++GLSEQ); GLDATA.set(gid,{runs,o}); if(GLDATA.size>300) GLDATA.delete(GLDATA.keys().next().value);
+  return `<div class="map" data-gid="${gid}" data-b="${b.map(v=>v.toFixed(1)).join(",")}">
     <svg viewBox="${vx.toFixed(1)} ${vy.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(tr("Map of the route"))}">${paths}</svg>
     <div class="map-ctl">
       <button type="button" data-mz="in" aria-label="${esc(tr("Zoom in"))}">+</button>
@@ -2370,10 +2385,112 @@ function mapFull(el, on){
   if(on) document.body.style.overflow="hidden"; else if(runUI.hidden) document.body.style.overflow="";
   if(!mapRO) requestAnimationFrame(()=>mapDraw(el));
 }
+/* ---------- Offline basemap behind the route ----------
+   If the app ships map/berlin.pmtiles (the Android build adds it), a real map is drawn behind the route:
+   streets, parks, water and names, all read from files on the device. The app still calls no servers.
+   Without that file, without WebGL, or for a route outside the map's area, the plain line map above stays.
+   The libraries (MapLibre GL JS, PMTiles, Protomaps style) live in map/ and load only when first needed. */
+const BASEMAP = { file:"map/berlin.pmtiles", bbox:[12.95,52.30,13.85,52.72], ready:null, range:false, buf:null };   // bbox: west, south, east, north
+const GLDATA = new Map(), GLLIVE = []; let GLSEQ = 0;
+const FLAVOR_LIGHT = { earth:"#f3f0e9", park_a:"#d6eacb", park_b:"#bddcae", wood_a:"#cde5c2", wood_b:"#b2d6a2", water:"#a7d1f3", buildings:"#e7e0d4",
+  pedestrian:"#ece8dd", hospital:"#f4e0e0", school:"#ece6d6", industrial:"#e8e5df", other:"#f7f5f0", minor_service:"#faf8f4", minor_a:"#fbfaf7", minor_b:"#ffffff",
+  minor_casing:"#e3ded4", minor_service_casing:"#e3ded4", link_casing:"#e3ded4", link:"#fff3cc", major:"#fff7e0", major_casing_early:"#ddd3bf", major_casing_late:"#ddd3bf",
+  highway:"#fbd88a", highway_casing_early:"#e2b868", highway_casing_late:"#e2b868", roads_label_major:"#6b6258", roads_label_minor:"#8a8176", city_label:"#3d3d3d", subplace_label:"#6e6e6e" };
+const FLAVOR_DARK = {};
+const glDark = () => { const t=document.documentElement.dataset.theme; return t==="dark" || (t!=="light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); };
+const glScript = src => new Promise((ok,no)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>no(new Error("load "+src)); document.head.appendChild(s); });
+/* Reads the archive in pieces if the file server supports ranges, otherwise loads the whole file once. */
+const baseSource = { getKey:()=>"berlin", getBytes: async (off,len)=>{
+  if(BASEMAP.range){ try{ const r=await fetch(BASEMAP.file,{headers:{Range:"bytes="+off+"-"+(off+len-1)}}); if(r.status===206) return {data:await r.arrayBuffer()}; }catch(e){} }
+  if(!BASEMAP.buf) BASEMAP.buf=await (await fetch(BASEMAP.file)).arrayBuffer();
+  return {data:BASEMAP.buf.slice(off,off+len)};
+} };
+function baseReady(){
+  if(BASEMAP.ready) return BASEMAP.ready;
+  return BASEMAP.ready=(async()=>{
+    try{
+      const c=document.createElement("canvas");
+      if(!(c.getContext("webgl2")||c.getContext("webgl"))) return false;
+      const r=await fetch(BASEMAP.file,{headers:{Range:"bytes=0-0"}});          // is the map file there?
+      if(!r.ok) return false;
+      BASEMAP.range = r.status===206; if(r.body && r.body.cancel) r.body.cancel();
+      const css=document.createElement("link"); css.rel="stylesheet"; css.href="map/maplibre-gl.css"; document.head.appendChild(css);
+      await glScript("map/maplibre-gl.js"); await glScript("map/pmtiles.js"); await glScript("map/basemaps.js");
+      const proto=new pmtiles.Protocol(); maplibregl.addProtocol("pmtiles", proto.tilev4); proto.add(new pmtiles.PMTiles(baseSource));
+      return true;
+    }catch(e){ hmlog("basemap:off"); return false; }
+  })();
+}
+function glStyle(){
+  const dark=glDark(), base=new URL(".",document.baseURI).href;
+  const flavor=Object.assign({}, basemaps.namedFlavor(dark?"dark":"light"), dark?FLAVOR_DARK:FLAVOR_LIGHT);
+  // font folders have no spaces, so every file server finds them
+  const layers=JSON.parse(JSON.stringify(basemaps.layers("basemap",flavor,{lang:LANG==="de"?"de":"en"})).replace(/Noto Sans (Regular|Medium|Italic)/g,"NotoSans$1"));
+  return { version:8, glyphs:base+"map/fonts/{fontstack}/{range}.pbf", sprite:base+"map/sprites/"+(dark?"dark":"light"),
+    sources:{ basemap:{ type:"vector", url:"pmtiles://berlin" } }, layers };
+}
+function glUpgrade(el){
+  const d=GLDATA.get(el.dataset.gid); if(!d || el._ml || el._glx) return;
+  const pts=[].concat(...d.runs.map(r=>[].concat(...r))), bb=BASEMAP.bbox;
+  if(!pts.length || pts.some(q=>q[1]<bb[0]||q[1]>bb[2]||q[0]<bb[1]||q[0]>bb[3])) return;   // outside the map: keep the line map
+  if(!window.WebGLRenderingContext) return;
+  baseReady().then(ok=>{
+    if(!ok || !el.isConnected || el._ml) return;
+    if(!el.clientWidth){   // inside a closed section: wait until it has a size
+      if(el._glwait || !window.ResizeObserver) return;
+      el._glwait=new ResizeObserver(()=>{ if(el.clientWidth>0){ el._glwait.disconnect(); el._glwait=null; glUpgrade(el); } });
+      el._glwait.observe(el); return;
+    }
+    glCreate(el,d,pts);
+  });
+}
+function glCreate(el,d,pts){
+  const host=document.createElement("div"); host.className="gl-host"; el.insertBefore(host,el.firstChild); el.classList.add("gl");
+  const b=new maplibregl.LngLatBounds(); pts.forEach(q=>b.extend([q[1],q[0]]));
+  el._glb=b; el._glo={padding:{top:46,bottom:42,left:30,right:78}, maxZoom:16};
+  let map;
+  try{
+    map=new maplibregl.Map({ container:host, style:glStyle(), bounds:b, fitBoundsOptions:el._glo, fadeDuration:0, dragRotate:false, pitchWithRotate:false, touchPitch:false,
+      attributionControl:{compact:false, customAttribution:"© OpenStreetMap contributors · Protomaps"} });
+  }catch(e){ host.remove(); el.classList.remove("gl"); el._glx=1; hmlog("basemap:fail"); return; }
+  map.touchZoomRotate.disableRotation();
+  map.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:"metric"}),"bottom-left");
+  map.on("error",()=>{});   // a missing glyph or tile must never break the route
+  map.on("load",()=>{
+    const lines=d.runs.map(parts=>({type:"Feature",properties:{},geometry:{type:"MultiLineString",coordinates:parts.filter(l=>l.length>1).map(l=>l.map(q=>[q[1],q[0]]))}}));
+    map.addSource("route",{type:"geojson",data:{type:"FeatureCollection",features:lines}});
+    const many=!!(d.o&&d.o.overlay);
+    if(!many) map.addLayer({id:"route-casing",type:"line",source:"route",layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#ffffff","line-width":10,"line-opacity":0.95}});
+    map.addLayer({id:"route-line",type:"line",source:"route",layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#2f6df6","line-width":many?3:5.5,"line-opacity":many?0.5:1}});
+    if(!many){
+      const parts=d.runs[0].filter(l=>l.length>1), first=parts[0][0], last=parts[parts.length-1][parts[parts.length-1].length-1];
+      const pin=c=>{ const e=document.createElement("div"); e.className="gl-pin "+c; return e; };
+      const loop=Math.hypot((first[0]-last[0])*111320,(first[1]-last[1])*68000)<60;
+      new maplibregl.Marker({element:pin("start")}).setLngLat([first[1],first[0]]).addTo(map);
+      new maplibregl.Marker({element:pin("finish"),offset:loop?[13,-13]:[0,0]}).setLngLat([last[1],last[0]]).addTo(map);
+    }
+  });
+  el._ml=map; if(mapRO) mapRO.unobserve(el); requestAnimationFrame(()=>{ try{ map.resize(); }catch(e){} });
+  GLLIVE.push(el); while(GLLIVE.length>3) glDrop(GLLIVE.shift());   // few WebGL contexts at a time
+}
+/* Gives a map back to the plain line map (or frees it when its element leaves the page). */
+function glDrop(el){
+  if(el._glwait){ try{ el._glwait.disconnect(); }catch(e){} el._glwait=null; }
+  if(!el._ml) return;
+  try{ el._ml.remove(); }catch(e){}
+  el._ml=null; el.classList.remove("gl"); const h=el.querySelector(".gl-host"); if(h) h.remove();
+  const i=GLLIVE.indexOf(el); if(i>=0) GLLIVE.splice(i,1);
+  if(mapRO && el.isConnected) mapRO.observe(el);
+}
 // Maps are inserted with innerHTML in many places. An observer fits each new map once.
-new MutationObserver(ms=>{ for(const m of ms) for(const n of m.addedNodes){ if(n.nodeType!==1) continue; if(n.matches && n.matches(".map")) mapState(n); if(n.querySelectorAll) n.querySelectorAll(".map").forEach(mapState); } })
+const mapsIn = n => [].concat(n.matches&&n.matches(".map")?[n]:[], n.querySelectorAll?[...n.querySelectorAll(".map")]:[]);
+new MutationObserver(ms=>{ for(const m of ms){
+    for(const n of m.addedNodes){ if(n.nodeType!==1) continue; mapsIn(n).forEach(el=>{ mapState(el); glUpgrade(el); }); }
+    for(const n of m.removedNodes){ if(n.nodeType!==1) continue; mapsIn(n).forEach(el=>{ glDrop(el); GLDATA.delete(el.dataset.gid); }); }
+  } })
   .observe(document.body,{childList:true,subtree:true});
-const mapOf = e => e.target && e.target.closest ? e.target.closest(".map") : null;
+const mapOfAny = e => e.target && e.target.closest ? e.target.closest(".map") : null;
+const mapOf = e => { const m=mapOfAny(e); return m && !m.classList.contains("gl") ? m : null; };   // line map gestures only
 document.addEventListener("pointerdown", e=>{
   const el=mapOf(e); if(!el || e.target.closest(".map-ctl")) return;
   const st=mapState(el);
@@ -2419,9 +2536,10 @@ document.addEventListener("wheel", e=>{
   mapZoom(el, Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top);
 }, {passive:false});
 document.addEventListener("click", e=>{
-  const el=mapOf(e); if(!el) return;
-  const z=e.target.closest("[data-mz]"); if(z){ mapZoom(el, z.dataset.mz==="in"?1.6:1/1.6); return; }
-  if(e.target.closest("[data-mfit]")){ mapFit(el); return; }
+  const el=mapOfAny(e); if(!el) return;
+  const gl=el._ml;
+  const z=e.target.closest("[data-mz]"); if(z){ if(gl){ z.dataset.mz==="in"?gl.zoomIn():gl.zoomOut(); } else mapZoom(el, z.dataset.mz==="in"?1.6:1/1.6); return; }
+  if(e.target.closest("[data-mfit]")){ if(gl) gl.fitBounds(el._glb,{...el._glo,duration:350}); else mapFit(el); return; }
   if(e.target.closest("[data-mfull]")){ mapFull(el, !el.classList.contains("full")); return; }
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape") document.querySelectorAll(".map.full").forEach(el=>mapFull(el,false)); });
