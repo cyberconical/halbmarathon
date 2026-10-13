@@ -21,6 +21,7 @@ Open Settings with the icon at the top right. Everything saves automatically, an
 
 - **Privacy zone around the start**: off, 150 m, 300 m (default), 500 m or 1 km.
 - **Save route**: yes (default) or no.
+- **Test mode: inaccurate GPS**: off (default) or on. Normally the tracker ignores GPS fixes with a reported error above 35 m. With test mode on it also records fixes up to 100 m, and ignores movement smaller than the reported error so wobble does not count as distance. Distance stays reliable when the phone reports a GPS speed; without a speed reading it is only approximate. Meant for testing indoors or in bad reception, turn it off for real runs. The diagnostic log then shows `test=1` and a separate count for fixes between 35 m and 100 m.
 
 See [[GPS recording|GPS-Recording]] and [[Privacy|Privacy]].
 
