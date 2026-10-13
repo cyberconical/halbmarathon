@@ -860,6 +860,9 @@ window.HM_I18N = { de: {
 "Save backup": "Backup speichern",
 "Save backup to …": "Backup ablegen in …",
 "Save route": "Route speichern",
+"Test mode: inaccurate GPS": "Testmodus: ungenaues GPS",
+"Normally fixes with an error above 35 m are ignored. In test mode the app also records fixes up to {m} m. Distance and route are then less exact. For testing only, turn it off again afterwards.": "Normalerweise werden Messpunkte mit mehr als 35 m Fehler ignoriert. Im Testmodus zeichnet die App auch Punkte bis {m} m auf. Strecke und Route sind dann ungenauer. Nur zum Testen, danach wieder ausschalten.",
+"Test mode is on: GPS fixes up to {m} m error are recorded.": "Testmodus ist an: Messpunkte bis {m} m Fehler werden aufgezeichnet.",
 "Save run": "Lauf speichern",
 "Saved as an extra session.": "Als zusätzliche Einheit gespeichert.",
 "Saved automatically": "Wird automatisch gespeichert",
@@ -1096,37 +1099,41 @@ function current(segs, act){
 }
 
 /* Raw fixes [time ms, lat, lon, accuracy m, speed m/s] -> cleaned points with active time and distance */
-function analyze(fixes, startMs, pauses, nowMs){
+function analyze(fixes, startMs, pauses, nowMs, opt){
+  /* opt.maxAcc: fixes less accurate than this (metres) are dropped. Default 35. Test mode raises it.
+     Above 35 m the movement thresholds grow with the reported accuracy, so GPS wobble is not counted as distance. */
+  const maxAcc=(opt&&opt.maxAcc>35)?opt.maxAcc:35, loose=maxAcc>35;
   const P=(pauses||[]).map(p=>({from:p.from,to:p.to==null?(nowMs||Infinity):p.to}));
   const act=t=>{ let s=(t-startMs)/1000; for(const p of P){ if(t>p.from) s-=(Math.min(t,p.to)-p.from)/1000; } return s; };
   const inPause=t=>P.some(p=>t>=p.from && t<p.to);
   /* Distance prefers the speed measured by the GPS chip (Doppler), which is far more precise than
      the distance between two noisy positions. Without it, the distance between points counts. */
   const pts=[]; let anchor=null, last=null, lastT=-Infinity, dist=0, drops=0, wasPaused=false;
-  const st={bad:0,old:0,paused:0,jump:0,still:0,dop:0,pos:0,a10:0,a20:0,a35:0,sp0:0,spmax:0};   // counters for the diagnostic log
+  const st={bad:0,old:0,paused:0,jump:0,still:0,dop:0,pos:0,a10:0,a20:0,a35:0,aX:0,sp0:0,spmax:0,limit:maxAcc};   // counters for the diagnostic log
   for(const f of fixes){
     const t=f[0], lat=f[1], lon=f[2], acc=f[3], sp=f[4];
     if(!(t>lastT) || t<startMs-3000){ st.old++; continue; }
-    if(acc>35){ st.bad++; continue; }
-    if(acc<=10) st.a10++; else if(acc<=20) st.a20++; else st.a35++;
+    if(acc>maxAcc){ st.bad++; continue; }
+    if(acc<=10) st.a10++; else if(acc<=20) st.a20++; else if(acc<=35) st.a35++; else st.aX++;
+    const noisy=loose&&acc>35, minStep=noisy?acc:3;                      // with a big error, movement smaller than the error is noise
     lastT=t;
     if(inPause(t)){ wasPaused=true; st.paused++; continue; }
     if(wasPaused){ anchor=null; last=null; wasPaused=false; }
     const a=Math.max(0,act(t));
-    if(!anchor){ anchor={t,lat,lon}; last={t,sp}; pts.push({a,d:dist,lat,lon,brk:true,t,acc}); drops=0; continue; }
+    if(!anchor){ anchor={t,lat,lon,acc}; last={t,sp}; pts.push({a,d:dist,lat,lon,brk:true,t,acc}); drops=0; continue; }
     const step=hav([anchor.lat,anchor.lon],[lat,lon]), dt=(t-anchor.t)/1000;
-    if(dt>0 && step/dt>9 && drops<5){ drops++; st.jump++; continue; }      // outlier (jump)
+    if(dt>0 && step/dt>9 && !(loose && step<=acc+(anchor.acc||0)) && drops<5){ drops++; st.jump++; continue; }      // outlier (jump); with loose accuracy a step within the error is no jump
     drops=0;
     const hasSp=sp>=0 && last.sp>=0, gap=(t-last.t)/1000;
     if(hasSp && gap<=5){
       const v0=last.sp<0.5?0:last.sp, v1=sp<0.5?0:sp; st.dop++; if(sp<0.5) st.sp0++; if(sp>st.spmax) st.spmax=sp;
       dist+=(v0+v1)/2*gap;
       last={t,sp};
-      if(step>=3 || dt>=8){ anchor={t,lat,lon}; pts.push({a,d:dist,lat,lon,brk:false,t,acc}); }
+      if(step>=minStep || dt>=8){ anchor={t,lat,lon,acc}; pts.push({a,d:dist,lat,lon,brk:false,t,acc}); }
     } else {
       last={t,sp};
-      if(step<3 && dt<8){ st.still++; continue; }                // standing still / noise
-      dist+=step; anchor={t,lat,lon}; pts.push({a,d:dist,lat,lon,brk:false,t,acc});
+      if(step<minStep && (dt<8||noisy)){ st.still++; continue; }       // standing still / noise (with a big error the point only moves once the step is bigger than the error)
+      dist+=noisy?Math.max(0,step-acc):step; anchor={t,lat,lon,acc}; pts.push({a,d:dist,lat,lon,brk:false,t,acc});   // with a big error, take off the expected error from each step
     }
   }
   const total=Math.max(0, nowMs==null?(pts.length?pts[pts.length-1].a:0):act(nowMs));
@@ -1560,7 +1567,7 @@ function normalize(x){
     logs: x.logs||{}, strength: x.strength||{}, alt: x.alt||{},
     habits: Array.isArray(x.habits)?x.habits:[], habitLog: x.habitLog||{},
     learnings: Array.isArray(x.learnings)?x.learnings:[],
-    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false) },
+    gps: { zone: [0,150,300,500,1000].includes(x.gps&&x.gps.zone) ? x.gps.zone : 300, save: !(x.gps && x.gps.save===false), test: !!(x.gps && x.gps.test===true) },
     updatedAt: x.updatedAt||0
   };
 }
@@ -2038,6 +2045,8 @@ function setAlt(id, what){
 // Raw fixes stay in memory. Only the result is stored on the device:
 // times, distances and (if wanted) the route without the privacy zone around the start.
 const HMTrk = window.HMTrk;
+const TEST_ACC = 100;                                              // test mode: accept fixes up to this error in metres
+const accOpt = () => ({ maxAcc: state.gps.test ? TEST_ACC : 35 });
 const TRK_KEY="hm2027-trk", PEND_KEY="hm2027-trk-pend";
 const lsGet = k => { try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } };
 const lsSet = (k,v) => { try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
@@ -2070,7 +2079,7 @@ function trkSave(){
   if(P){ try{ P.saveState({state:JSON.stringify(s)}).catch(()=>{}); }catch(e){} }
 }
 function newTrk(id, startedAt, native, extra){
-  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt), cue:-1, segs:[]}, extra||{});   // the tracker only tracks: no plan segments, no cues
+  trk=Object.assign({id, startedAt, native, pauses:[], laps:[], fixes:[], next:0, paused:false, an:HMTrk.analyze([],startedAt,[],startedAt,accOpt()), cue:-1, segs:[]}, extra||{});   // the tracker only tracks: no plan segments, no cues
   trkSave();
   clearInterval(trkTimer); trkTimer=setInterval(trkTick,1000);
 }
@@ -2117,7 +2126,7 @@ async function trkTick(){
       if(r.fixes && r.fixes.length) for(const f of r.fixes) me.fixes.push(f);
       me.next=r.next; me.gps=r.gps; me.dead=!r.running && !me.ending;
     }
-    me.an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, Date.now());
+    me.an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, Date.now(), accOpt());
   }catch(e){}
   me.busy=false;
   if(trk===me) updateRun();
@@ -2151,11 +2160,11 @@ async function trkEnd(){
     if(me.watch!=null) navigator.geolocation.clearWatch(me.watch);
     if(me.lock){ try{ me.lock.release(); }catch(e){} }
   }
-  const an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, now);
+  const an=HMTrk.analyze(me.fixes, me.startedAt, me.pauses, now, accOpt());
   const km=Math.round(an.dist/10)/100, sec=Math.round(an.active);
   { const F=me.fixes, s=an.st||{}, accs=F.map(f=>f[3]).filter(a=>a>=0).sort((a,b)=>a-b);   // counters only, no places
-    hmlog("stats fixes="+F.length+" used="+an.pts.length+" dist="+Math.round(an.dist)+"m active="+sec+"s pauses="+me.pauses.length);
-    hmlog("acc <=10:"+s.a10+" <=20:"+s.a20+" <=35:"+s.a35+" >35(dropped):"+s.bad+" best="+Math.round(accs[0]??-1)+" med="+Math.round(accs[accs.length>>1]??-1)+" worst="+Math.round(accs[accs.length-1]??-1));
+    hmlog("stats test="+(s.limit>35?1:0)+" fixes="+F.length+" used="+an.pts.length+" dist="+Math.round(an.dist)+"m active="+sec+"s pauses="+me.pauses.length);
+    hmlog("acc <=10:"+s.a10+" <=20:"+s.a20+" <=35:"+s.a35+(s.limit>35?" <="+s.limit+"(test):"+s.aX:"")+" >"+s.limit+"(dropped):"+s.bad+" best="+Math.round(accs[0]??-1)+" med="+Math.round(accs[accs.length>>1]??-1)+" worst="+Math.round(accs[accs.length-1]??-1));
     hmlog("drop old="+s.old+" paused="+s.paused+" jump="+s.jump+" still="+s.still+" | speed doppler="+s.dop+" slow(<0.5)="+s.sp0+" nospeed="+F.filter(f=>!(f[4]>=0)).length+" max="+(Math.round((s.spmax||0)*10)/10)+"m/s"); }
   const sp=HMTrk.splits(an.pts,an.active);
   const route=state.gps.save?HMTrk.buildRoute(an.pts,state.gps.zone).parts:null;
@@ -2245,6 +2254,7 @@ function showRun(view){
       <div class="run-label">${s?esc(s.t||tok(s.label)||tr("Run")):tr("Run")}</div>
       <p class="note">${tr("The app only records distance, time and route. The screen may stay off.")}</p>
       <p class="hint">${z?tr("Privacy zone: {z} around the start. Nothing is stored there, but distance and time still count.",{z:zoneText(z)}):tr("Privacy zone is off.")} ${state.gps.save?"":tr("The route won't be saved.")} ${tr("Everything stays on this device.")}</p>
+      ${state.gps.test?`<p class="hint">${tr("Test mode is on: GPS fixes up to {m} m error are recorded.",{m:TEST_ACC})}</p>`:""}
       <p class="err" id="rMsg"></p>
       <div class="run-btns one"><button class="btn big" type="button" data-rstart>${tr("Start")}</button></div>`;
     return;
@@ -3104,6 +3114,9 @@ function renderSettings(){
         <div class="full"><label>${tr("Save route")}</label>
           ${chipRow([[true,tr("Yes")],[false,tr("No")]], state.gps.save, "data-gsave")}
           <p class="hint">${tr("The route belongs to the run, stays on your device and is part of your backup. With “No”, times, distances and intervals are kept, but there's no map.")}</p></div>
+        <div class="full"><label>${tr("Test mode: inaccurate GPS")}</label>
+          ${chipRow([[true,tr("On")],[false,tr("Off")]], state.gps.test, "data-gtest")}
+          <p class="hint">${tr("Normally fixes with an error above 35 m are ignored. In test mode the app also records fixes up to {m} m. Distance and route are then less exact. For testing only, turn it off again afterwards.",{m:TEST_ACC})}</p></div>
       </div>
     </section>
     <section>
@@ -3210,6 +3223,8 @@ document.addEventListener("click", e=>{
   const lg=t.closest("[data-lang]"); if(lg){ setLang(lg.dataset.lang); return; }
   const gz=t.closest("[data-gzone]");
   if(gz){ state.gps.zone=+gz.dataset.gzone; persist(); renderSettings(); return; }
+  const gt=t.closest("[data-gtest]");
+  if(gt){ state.gps.test=gt.dataset.gtest==="true"; persist(); renderSettings(); return; }
   const gs=t.closest("[data-gsave]");
   if(gs){ state.gps.save=gs.dataset.gsave==="true"; persist(); renderSettings(); return; }
   const dl=t.closest("[data-dlog]");
