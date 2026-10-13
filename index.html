@@ -165,6 +165,13 @@ select.inp{ font-size:16px; font-weight:600; padding:10px 8px; appearance:auto; 
 .map.gl .map-ctl button{ width:40px; height:40px; border:0; border-radius:50%; background:#fff; color:#1c1c1e; box-shadow:0 2px 8px rgba(0,0,0,.3); }
 .map.gl .maplibregl-ctrl-attrib{ font-size:10px; background:rgba(255,255,255,.7); }
 .map.gl .maplibregl-ctrl-scale{ font-size:10px; background:rgba(255,255,255,.7); }
+.livemap{ position:relative; height:min(64vw,320px); margin:14px 0; border-radius:20px; overflow:hidden; background:#e9e6df; box-shadow:0 2px 14px rgba(0,0,0,.2); touch-action:none; }
+.livemap .gl-host{ position:absolute !important; inset:0; }
+.lm-ctl{ position:absolute; top:10px; right:10px; z-index:5; display:flex; flex-direction:column; gap:8px; }
+.lm-ctl button{ width:40px; height:40px; padding:0; border:0; border-radius:50%; background:#fff; color:#1c1c1e; font-size:22px; font-weight:800; line-height:1; display:grid; place-items:center; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.livemap .maplibregl-ctrl-attrib, .livemap .maplibregl-ctrl-scale{ font-size:10px; background:rgba(255,255,255,.7); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .lm-ctl button{ background:#2c2c2e; color:#fff; } }
+:root[data-theme="dark"] .lm-ctl button{ background:#2c2c2e; color:#fff; }
 .gl-pin{ width:20px; height:20px; border-radius:50%; border:3px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.45); }
 .gl-pin.start{ background:#30c15b; }
 .gl-pin.finish{ width:26px; height:26px; border-width:2px; background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/13px 13px; }
@@ -885,6 +892,7 @@ window.HM_I18N = { de: {
 "Show {n} removed sessions again": "{n} entfernte Einheiten wieder einblenden",
 "Show 1 removed session again": "1 entfernte Einheit wieder einblenden",
 "Show whole route": "Ganze Route zeigen",
+"Center on my position": "Auf meine Position zentrieren",
 "Sick": "Krank",
 "Side split": "Seitspagat",
 "Side steps with a mini band": "Seitliches Gehen mit Miniband",
@@ -2245,6 +2253,7 @@ async function diagShare(){
 /* ---------- Run screens ---------- */
 const zoneText = z => z>=1000 ? "1 km" : z+" m";
 function showRun(view){
+  liveMapDrop();
   trkView=view; runUI.hidden=false; runUI.classList.remove("work"); document.body.style.overflow="hidden";
   runBar.hidden=true;
   if(view==="ready"){
@@ -2264,6 +2273,7 @@ function showRun(view){
       <div class="run-label" id="rLabel"></div><div class="run-sub" id="rSub"></div>
       <div class="run-time" id="rTime">0:00</div>
       <div class="run-grid"><div><b id="rDist">0${DEC()}00</b><span>km</span></div><div><b id="rPace">–</b><span>min/km</span></div></div>
+      <div class="livemap" id="rMap" hidden><div class="lm-ctl"><button type="button" data-lm="in" aria-label="${esc(tr("Zoom in"))}">+</button><button type="button" data-lm="out" aria-label="${esc(tr("Zoom out"))}">−</button><button type="button" data-lm="fit" aria-label="${esc(tr("Center on my position"))}">${ICONS.fit}</button></div></div>
       <p class="err" id="rMsg"></p>
       <div class="run-btns"><button class="btn ghost big" type="button" data-rpause id="rPause">${tr("Pause")}</button><button class="btn big" type="button" data-rend>${tr("Finish")}</button></div>`;
     updateRun(); return;
@@ -2283,7 +2293,7 @@ function showRun(view){
       <div class="run-btns"><button class="btn big wide" type="button" data-raccept>${tr("Apply to the run")}</button><button class="btn ghost big wide" type="button" data-rdiscard>${tr("Discard")}</button></div>`;
   }
 }
-function closeRun(){ runUI.hidden=true; runUI.innerHTML=""; runUI.classList.remove("work"); document.body.style.overflow=""; trkView=""; updateRunBar(); }
+function closeRun(){ liveMapDrop(); runUI.hidden=true; runUI.innerHTML=""; runUI.classList.remove("work"); document.body.style.overflow=""; trkView=""; updateRunBar(); }
 function updateRunBar(){
   if(!trk || !runUI.hidden){ runBar.hidden=true; return; }
   runBar.hidden=false;
@@ -2307,6 +2317,7 @@ function updateRun(){
   if(trk.dead) gt=tr("Service ended");
   set("rGps", gt);
   const m=document.getElementById("rMsg"); if(m) m.textContent = trk.dead?tr("The system ended the recording. Finish the run to keep the data so far."):(trk.geoErr?tr("Location is not being shared."):"");
+  liveMapUpdate();
 }
 
 /* ---------- Map ----------
@@ -2416,6 +2427,7 @@ const FLAVOR_LIGHT = { earth:"#f3f0e9", park_a:"#d6eacb", park_b:"#bddcae", wood
   highway:"#fbd88a", highway_casing_early:"#e2b868", highway_casing_late:"#e2b868", roads_label_major:"#6b6258", roads_label_minor:"#8a8176", city_label:"#3d3d3d", subplace_label:"#6e6e6e" };
 const FLAVOR_DARK = {};
 const glDark = () => { const t=document.documentElement.dataset.theme; return t==="dark" || (t!=="light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); };
+const GLPR = () => Math.min(window.devicePixelRatio||1, 2);   // a 2.7x canvas needs twice the memory of a 2x one and looks the same
 const glScript = src => new Promise((ok,no)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>no(new Error("load "+src)); document.head.appendChild(s); });
 /* Reads the archive in pieces if the file server supports ranges, otherwise loads the whole file once. */
 const baseSource = { getKey:()=>"berlin", getBytes: async (off,len)=>{
@@ -2434,6 +2446,7 @@ function baseReady(){
       BASEMAP.range = r.status===206; { const cr=(r.headers.get("content-range")||"").split("/")[1], cl=r.headers.get("content-length"); hmlogOnce("map:file status="+r.status+" sizeMB="+Math.round((+cr||(r.status===200?+cl:0)||0)/1e5)/10+" type="+String(r.headers.get("content-type")||"?").slice(0,30)); } if(r.body && r.body.cancel) r.body.cancel();
       const css=document.createElement("link"); css.rel="stylesheet"; css.href="map/maplibre-gl.css"; document.head.appendChild(css);
       await glScript("map/maplibre-gl.js"); await glScript("map/pmtiles.js"); await glScript("map/basemaps.js");
+      try{ if(maplibregl.setWorkerCount) maplibregl.setWorkerCount(1); }catch(e){}      // one tile worker thread instead of two
       const proto=new pmtiles.Protocol(); maplibregl.addProtocol("pmtiles", proto.tilev4); proto.add(new pmtiles.PMTiles(baseSource));
       hmlogOnce("map:ready range="+(BASEMAP.range?1:0)+" ml="+(maplibregl.getVersion?maplibregl.getVersion():"?"));
       const t0=Date.now(); new pmtiles.PMTiles(baseSource).getHeader().then(h=>hmlogOnce("map:header zoom="+h.minZoom+"-"+h.maxZoom+" tiles="+h.numAddressedTiles+" ms="+(Date.now()-t0)), e=>hmlogOnce("map:headerfail "+String(e&&e.message||e).slice(0,60)));
@@ -2472,7 +2485,7 @@ function glCreate(el,d,pts){
   el._glb=b; el._glo={padding:{top:46,bottom:42,left:30,right:78}, maxZoom:16};
   let map;
   try{
-    map=new maplibregl.Map({ container:host, style:glStyle(), bounds:b, fitBoundsOptions:el._glo, fadeDuration:0, dragRotate:false, pitchWithRotate:false, touchPitch:false,
+    map=new maplibregl.Map({ container:host, style:glStyle(), bounds:b, fitBoundsOptions:el._glo, maxZoom:19, pixelRatio:GLPR(), maxTileCacheSize:20, fadeDuration:0, dragRotate:false, pitchWithRotate:false, touchPitch:false,
       attributionControl:{compact:false, customAttribution:"© OpenStreetMap contributors · Protomaps"} });
   }catch(e){ host.remove(); el.classList.remove("gl"); el._glx=1; hmlogOnce("map:fail"); return; }
   map.touchZoomRotate.disableRotation();
@@ -2499,7 +2512,7 @@ function glCreate(el,d,pts){
   map.on("styledata",()=>{ if(!routed && map.isStyleLoaded()){ try{ addRoute(); }catch(e){ routed=false; } } });
   const tm=setTimeout(()=>{ if(!loaded && el._ml===map){ hmlogOnce("map:timeout errs="+nerr); glDrop(el); el._glx=1; } },12000);
   el._ml=map; if(mapRO) mapRO.unobserve(el); requestAnimationFrame(()=>{ try{ map.resize(); }catch(e){} });
-  GLLIVE.push(el); while(GLLIVE.length>3) glDrop(GLLIVE.shift());   // few WebGL contexts at a time
+  GLLIVE.push(el); while(GLLIVE.length>2) glDrop(GLLIVE.shift());   // few WebGL contexts at a time (each one holds a canvas, tiles and a GPU context)
 }
 /* Gives a map back to the plain line map (or frees it when its element leaves the page). */
 function glDrop(el){
@@ -2510,6 +2523,73 @@ function glDrop(el){
   const i=GLLIVE.indexOf(el); if(i>=0) GLLIVE.splice(i,1);
   if(mapRO && el.isConnected) mapRO.observe(el);
 }
+/* ---------- Live map while recording ----------
+   Shows up with the first fix, even a single inaccurate one: a dot for the position, a circle for the reported
+   error, and the cleaned track as it grows. Follows the position until the map is dragged; the third button
+   centres it again. Outside the Berlin map (or without the map file) the same view is drawn on a plain background. */
+const LIVE = { map:null, el:null, follow:true, n:-1, busy:false, off:false };
+function liveMapDrop(){ if(LIVE.map){ try{ LIVE.map.remove(); }catch(e){} } LIVE.map=null; LIVE.el=null; LIVE.follow=true; LIVE.n=-1; LIVE.busy=false; LIVE.off=false; }
+const liveStyle = () => ({ version:8, sources:{}, layers:[{id:"bg",type:"background",paint:{"background-color":glDark()?"#2b2d33":"#eceae3"}}] });
+function circleGeo(lat,lon,r){ const c=[], k=Math.cos(lat*Math.PI/180); for(let i=0;i<=40;i++){ const a=i/40*2*Math.PI; c.push([lon+Math.sin(a)*r/(MPD*k), lat+Math.cos(a)*r/MPD]); } return {type:"Feature",properties:{},geometry:{type:"Polygon",coordinates:[c]}}; }
+function liveMapPaint(lf){
+  const m=LIVE.map; if(!m || !m.getSource("me") || !trk) return;
+  const lat=lf[1], lon=lf[2], acc=lf[3]>0?Math.min(lf[3],300):0, parts=[]; let cur=null;
+  for(const p of trk.an.pts){ if(p.brk||!cur){ cur=[]; parts.push(cur); } cur.push([p.lon,p.lat]); }
+  m.getSource("me").setData({type:"Feature",properties:{},geometry:{type:"Point",coordinates:[lon,lat]}});
+  m.getSource("acc").setData(acc>=5?circleGeo(lat,lon,acc):{type:"FeatureCollection",features:[]});
+  m.getSource("trail").setData({type:"Feature",properties:{},geometry:{type:"MultiLineString",coordinates:parts.filter(l=>l.length>1)}});
+  if(LIVE.follow) m.easeTo({center:[lon,lat],duration:500});
+}
+async function liveMapCreate(el,lf){
+  if(LIVE.busy) return; LIVE.busy=true;
+  const ok=await baseReady();
+  LIVE.busy=false;
+  if(!ok){ LIVE.off=true; el.hidden=true; hmlogOnce("map:live-off"); return; }
+  if(!el.isConnected || LIVE.map || trkView!=="live") return;
+  const bb=BASEMAP.bbox, inside=lf[2]>=bb[0]&&lf[2]<=bb[2]&&lf[1]>=bb[1]&&lf[1]<=bb[3];
+  const host=document.createElement("div"); host.className="gl-host"; el.insertBefore(host,el.firstChild);
+  let map;
+  try{
+    map=new maplibregl.Map({ container:host, style:inside?glStyle():liveStyle(), center:[lf[2],lf[1]], zoom:lf[3]>80?15:16.5, minZoom:4, maxZoom:19, pixelRatio:GLPR(), maxTileCacheSize:20,
+      fadeDuration:0, dragRotate:false, pitchWithRotate:false, touchPitch:false, attributionControl:{compact:false, customAttribution:"© OpenStreetMap contributors · Protomaps"} });
+  }catch(e){ LIVE.off=true; host.remove(); el.hidden=true; hmlogOnce("map:live-fail"); return; }
+  map.touchZoomRotate.disableRotation();
+  map.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:"metric"}),"bottom-left");
+  LIVE.map=map; LIVE.el=el; LIVE.follow=true; LIVE.n=-1;
+  map.on("dragstart",()=>{ LIVE.follow=false; });
+  let nerr=0; map.on("error",ev=>{ if(++nerr>3) return; hmlogOnce("map:live-err "+String(ev&&ev.error&&ev.error.message||"?").replace(/[0-9a-z]+:\/\/\S*/gi,"url").slice(0,50)); });
+  const init=()=>{
+    if(LIVE.map!==map || map.getSource("me")) return;
+    const empty={type:"FeatureCollection",features:[]};
+    map.addSource("acc",{type:"geojson",data:empty}); map.addSource("trail",{type:"geojson",data:empty}); map.addSource("me",{type:"geojson",data:empty});
+    map.addLayer({id:"acc",type:"fill",source:"acc",paint:{"fill-color":"#2f6df6","fill-opacity":0.14}});
+    map.addLayer({id:"acc-line",type:"line",source:"acc",paint:{"line-color":"#2f6df6","line-width":1,"line-opacity":0.5}});
+    map.addLayer({id:"trail-casing",type:"line",source:"trail",layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#ffffff","line-width":10,"line-opacity":0.95}});
+    map.addLayer({id:"trail",type:"line",source:"trail",layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#2f6df6","line-width":5.5}});
+    map.addLayer({id:"me",type:"circle",source:"me",paint:{"circle-radius":8,"circle-color":"#2f6df6","circle-stroke-color":"#ffffff","circle-stroke-width":3}});
+    const f=trk&&trk.fixes[trk.fixes.length-1]; if(f){ LIVE.n=trk.fixes.length; liveMapPaint(f); }
+    hmlogOnce("map:live-ready inside="+(inside?1:0));
+  };
+  map.on("styledata",()=>{ if(map.isStyleLoaded()) init(); });
+  map.on("load",init);
+  requestAnimationFrame(()=>{ try{ map.resize(); }catch(e){} });
+}
+function liveMapUpdate(){
+  const el=document.getElementById("rMap");
+  if(!el || !trk || trkView!=="live" || LIVE.off) return;
+  const lf=trk.fixes[trk.fixes.length-1];
+  if(!lf){ el.hidden=true; return; }                          // no fix yet: nothing to show
+  if(LIVE.el && LIVE.el!==el) liveMapDrop();                  // the screen was rebuilt
+  if(!LIVE.map){ el.hidden=false; liveMapCreate(el,lf); return; }
+  if(trk.fixes.length===LIVE.n) return;
+  LIVE.n=trk.fixes.length; liveMapPaint(lf);
+}
+document.addEventListener("click", e=>{
+  const b=e.target.closest&&e.target.closest("[data-lm]"); if(!b || !LIVE.map) return;
+  const m=LIVE.map, a=b.dataset.lm;
+  if(a==="in") m.zoomIn(); else if(a==="out") m.zoomOut();
+  else { LIVE.follow=true; const f=trk&&trk.fixes[trk.fixes.length-1]; if(f) m.easeTo({center:[f[2],f[1]],zoom:Math.max(m.getZoom(),16),duration:350}); }
+});
 // Maps are inserted with innerHTML in many places. An observer fits each new map once.
 const mapsIn = n => [].concat(n.matches&&n.matches(".map")?[n]:[], n.querySelectorAll?[...n.querySelectorAll(".map")]:[]);
 new MutationObserver(ms=>{ for(const m of ms){

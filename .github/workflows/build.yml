@@ -62,6 +62,8 @@ jobs:
           p = "android/app/build.gradle"
           t = open(p).read()
           t = re.sub(r"try \{\s*def servicesJSON.*?\n\}\s*catch\(Exception e\) \{.*?\n\}\n?", "", t, flags=re.S)
+          # keep the big map file uncompressed in the APK, so the WebView can read pieces of it without unpacking it from the start
+          t = re.sub(r"(?m)^android \{\n", "android {\n    androidResources {\n        noCompress 'pmtiles'\n    }\n", t, count=1)
           open(p, "w").write(t)
           p = "android/build.gradle"
           t = open(p).read()
@@ -69,6 +71,7 @@ jobs:
           open(p, "w").write(t)
           PY
           sed -i 's/android:allowBackup="true"/android:allowBackup="false"/' android/app/src/main/AndroidManifest.xml
+          grep -q "noCompress 'pmtiles'" android/app/build.gradle || { echo "pmtiles would be compressed in the APK" >&2; exit 1; }
           if grep -rn "google-services" android --include=*.gradle; then echo "Google services plugin is still included" >&2; exit 1; fi
           grep -q 'android:allowBackup="false"' android/app/src/main/AndroidManifest.xml || { echo "allowBackup is not disabled" >&2; exit 1; }
           # Launcher name: "Half Marathon", on phones set to German "Halbmarathon"

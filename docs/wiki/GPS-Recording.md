@@ -27,6 +27,8 @@ Around the starting point lies an area whose points are **never stored**. Distan
 
 ## Map and route
 
+While recording, a live map appears with the first GPS fix, even a single inaccurate one: a dot for your position, a circle for the reported error and the track so far. It follows you until you drag it; the third button centres it again. Outside Berlin it is drawn on a plain background.
+
 The route appears as a map in the summary, in the logged run and, overlaid, in the stats. **No map tiles are downloaded**; the app calls no servers. A Berlin basemap (OpenStreetMap data) ships inside the app; for routes outside Berlin you see just your line, drawn to scale.
 
 | Gesture | Effect |
