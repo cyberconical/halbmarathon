@@ -2461,7 +2461,9 @@ function glCreate(el,d,pts){
   map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:"metric"}),"bottom-left");
   map.on("error",ev=>{ hmlogOnce("map:err "+String(ev&&ev.error&&ev.error.message||"?").replace(/[0-9a-z]+:\/\/\S*/gi,"url").slice(0,50)); });   // a missing glyph or tile must never break the route
-  map.on("load",()=>{
+  let routed=false, loaded=false;
+  const addRoute=()=>{
+    if(routed) return; routed=true;
     const lines=d.runs.map(parts=>({type:"Feature",properties:{},geometry:{type:"MultiLineString",coordinates:parts.filter(l=>l.length>1).map(l=>l.map(q=>[q[1],q[0]]))}}));
     map.addSource("route",{type:"geojson",data:{type:"FeatureCollection",features:lines}});
     const many=!!(d.o&&d.o.overlay);
@@ -2474,7 +2476,11 @@ function glCreate(el,d,pts){
       new maplibregl.Marker({element:pin("start")}).setLngLat([first[1],first[0]]).addTo(map);
       new maplibregl.Marker({element:pin("finish"),offset:loop?[13,-13]:[0,0]}).setLngLat([last[1],last[0]]).addTo(map);
     }
-  });
+  };
+  // the route must show even if the basemap tiles fail; and a map that never loads goes back to the line map
+  map.on("load",()=>{ loaded=true; clearTimeout(tm); addRoute(); hmlogOnce("map:loaded"); });
+  map.on("styledata",()=>{ if(!routed && map.isStyleLoaded()){ try{ addRoute(); }catch(e){ routed=false; } } });
+  const tm=setTimeout(()=>{ if(!loaded && el._ml===map){ hmlogOnce("map:timeout"); glDrop(el); el._glx=1; } },12000);
   el._ml=map; if(mapRO) mapRO.unobserve(el); requestAnimationFrame(()=>{ try{ map.resize(); }catch(e){} });
   GLLIVE.push(el); while(GLLIVE.length>3) glDrop(GLLIVE.shift());   // few WebGL contexts at a time
 }
