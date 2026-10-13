@@ -8,7 +8,7 @@ The workflow `.github/workflows/build.yml` (“Build APK”) runs
 
 - on every **published release**. The APK is attached to the release.
 - **manually** via the “Actions” tab, “Build APK”, “Run workflow” (choose a branch). The APK is then available as the artifact `halbmarathon-apk` of that run.
-- on every push to the branch `claude/gps-tracking` (for testing).
+- on every **pull request** against `main` (and on every new push to it). The check is called `build`. In the repository settings under Branches it can be made a required check, so nothing reaches `main` without a green build. The APK of the run is available as an artifact for testing.
 
 A run takes about 2 minutes.
 
