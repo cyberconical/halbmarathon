@@ -47,7 +47,9 @@ The functions in `HMTrk` are pure and can be loaded in Node, see [[Analysis engi
 - send every `PLAN` description through `parseSegments` **in both languages** and check that they give identical segments (currently 18 of the 54 runs give segments). The sum of the segments doesn't have to match the planned minutes exactly: those are rounded and include some buffer; for some sessions the sum is 4 to 7 minutes less,
 - `analyze` with an invented straight track at constant speed, with pauses, outliers and poor accuracy,
 - `buildRoute` on a noisy track: the smoothed line should be closer to the true path than the raw fixes, and with a fixed `rand` no point may lie inside the privacy zone,
-- `encode` and `decode` round trip.
+- `encode` and `decode` round trip,
+- `analyzer`: feed it the fixes one tick at a time, with pauses opening and closing like in the app, and compare every tick with `analyze` of the list so far. The result (points, distance, counters, running time) must be identical. The timing matters: a tick runs after the fix arrived, so "now" is later than the newest fix,
+- the voice: `PaceTracker.java` and `PaceSpeech.java` use no Android classes, so `javac` compiles them on a computer. Feed the same simulated fixes to `PaceTracker` and to `analyze` plus `splits` and compare the marks (plain, noisy, without GPS speed, with jumps, with pauses, test mode). They must agree. If you change the distance rules in one place, change the other and run this again.
 
 ### Testing the app with a simulated plugin
 

@@ -8,6 +8,7 @@ The app is built so that it **cannot send anything you don't share yourself**. T
 - The app calls no servers. It uses no Google services, no ads and no trackers. The font ships with the app. The map shows your own route on a Berlin basemap that ships inside the app; no map tiles are downloaded.
 - Location is used only during a recording and never sent. The app reads the device's GPS directly (Android `LocationManager`), not Google's location services.
 - Android does not back up the app data to the cloud. Your entries only leave the device if you share a backup or a log yourself.
+- Voice announcements (optional, off by default) are spoken by the phone's own text-to-speech. The app hands it only the sentence, for example “1 kilometre. Pace six ten. Average six eleven.”, never a position. It prefers an installed voice that works offline. If your speech engine only has an online English voice, that engine decides what it sends, not this app; install an offline English voice to avoid that.
 
 ## What lives where
 
@@ -58,7 +59,7 @@ More: [[Troubleshooting|Troubleshooting]] and [[Android plugin|Android-Plugin]].
 | Foreground service, type location | so recording continues while the screen is off |
 | Notifications | the notice that the service is running (Android 13 and newer) |
 | Vibration | cues during intervals |
-| Wake lock | keep the CPU awake so cues come on time |
+| Wake lock | keep the CPU awake so cues come on time, and for the few seconds a voice announcement takes |
 
 The build checks on every run that these permissions are in the final manifest, see [[Build and release|Build-and-Release]].
 

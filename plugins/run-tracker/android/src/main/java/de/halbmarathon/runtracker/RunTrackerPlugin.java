@@ -59,7 +59,10 @@ public class RunTrackerPlugin extends Plugin {
             call.reject("A recording is already running.", "RUNNING");
             return;
         }
-        RunTrackerService.prepare(call.getString("cues", "[]"), call.getString("meta", ""), call.getString("lang", "en"));
+        Integer voice = call.getInt("voice", 0);
+        Double maxAcc = call.getDouble("maxAcc", 35.0);
+        RunTrackerService.prepare(call.getString("cues", "[]"), call.getString("meta", ""), call.getString("lang", "en"),
+            voice == null ? 0 : voice, maxAcc == null ? 35.0 : maxAcc);
         Intent intent = new Intent(getContext(), RunTrackerService.class);
         try {
             if (Build.VERSION.SDK_INT >= 26) {
@@ -77,6 +80,44 @@ public class RunTrackerPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("startedAt", RunTrackerService.startedAt);
         call.resolve(ret);
+    }
+
+    private static Announcer testVoice;
+
+    /**
+     * Speaks a sample announcement, so the person can check that an English voice is installed and how loud
+     * it is. Resolves as soon as the engine is ready, or rejects with NO_ENGLISH or UNAVAILABLE.
+     */
+    @PluginMethod
+    public void testVoice(final PluginCall call) {
+        final java.util.concurrent.atomic.AtomicBoolean answered = new java.util.concurrent.atomic.AtomicBoolean(false);
+        final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        try {
+            if (testVoice != null) testVoice.shutdown();
+            testVoice = new Announcer(getContext(), true, new Announcer.StatusListener() {
+                @Override
+                public void onStatus(String status) {
+                    if (!answered.compareAndSet(false, true)) return;
+                    if (Announcer.READY.equals(status)) call.resolve();
+                    else if (Announcer.NO_ENGLISH.equals(status)) call.reject("No English voice is installed.", "NO_ENGLISH");
+                    else call.reject("Text-to-speech is not available.", "UNAVAILABLE");
+                }
+            });
+            testVoice.speak(PaceSpeech.sample());
+            RunLog.add("voice:test");
+            // An engine that never answers must not leave the button waiting.
+            main.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (!answered.compareAndSet(false, true)) return;
+                    if (testVoice != null) testVoice.shutdown();
+                    call.reject("Text-to-speech is not available.", "UNAVAILABLE");
+                }
+            }, 8000);
+        } catch (Throwable t) {
+            RunLog.add("voice:test-error " + RunLog.describe(t));
+            if (answered.compareAndSet(false, true)) call.reject("Text-to-speech is not available.", "UNAVAILABLE");
+        }
     }
 
     /** The UI stores its small state here (pauses, laps), see getStatus(). */
@@ -170,6 +211,7 @@ public class RunTrackerPlugin extends Plugin {
         ret.put("running", RunTrackerService.running);
         ret.put("paused", RunTrackerService.paused);
         ret.put("gps", RunTrackerService.gpsOn);
+        ret.put("voice", RunTrackerService.voiceStatus);
         call.resolve(ret);
     }
 

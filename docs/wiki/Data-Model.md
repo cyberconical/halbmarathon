@@ -125,7 +125,7 @@ Entries outside the plan from the weekly overview or quick logging. `date` in th
 
 ### `gps`
 
-`zone` is the radius of the privacy zone in meters (default 300), `save` whether routes are stored (default yes).
+`zone` is the radius of the privacy zone in meters (default 300), `save` whether routes are stored (default yes), `test` whether test mode for inaccurate GPS is on (default no), `voice` the distance between voice announcements in meters: `0` (off, default), `500` or `1000`. Other values become `0`.
 
 ### `profile.lang`
 

@@ -14,6 +14,13 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
+    <!-- Voice announcements use the phone's own text-to-speech. Android 11 and newer only let an app find the speech engine if it asks for it here. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application>
         <service
             android:name="de.halbmarathon.runtracker.RunTrackerService"

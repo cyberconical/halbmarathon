@@ -10,6 +10,7 @@ The `<script id="engine">` block in `index.html` provides the object `window.HMT
 | `cuesFor(segs, label, endText)` | segments, label function, final text | cues `[{at, v, n}]` for the service |
 | `current(segs, act)` | segments, running time in s | current segment, time left, next |
 | `analyze(fixes, startMs, pauses, nowMs)` | raw fixes, start, pauses | cleaned points, distance, running time |
+| `analyzer(startMs, opt)` | start, options | an object with `feed(fixes, pauses, nowMs)` and `result(pauses, nowMs)`. Does the same as `analyze` but remembers how far it got, so a live recording only processes the **new** fixes each second. `analyze` is `analyzer` fed once |
 | `distAt(pts, a)` | points, running time | distance at that moment (interpolated) |
 | `intervals(pts, segs, active)` | points, segments, running time | time and meters of each **reached** segment, plus “after” |
 | `lapSegs(laps, active)` | own lap marks | segments from laps |
@@ -98,6 +99,10 @@ The map then draws the line as Catmull-Rom curves instead of straight segments. 
 6. Circle center and radius are not returned and never stored.
 
 For tests, the randomness can be fixed through the `rand` parameter.
+
+## Same rules in the background service
+
+Voice announcements need the distance while the screen is off, when the page does not run. `PaceTracker.java` in the Android plugin therefore repeats the rules of `analyze` (and the mark interpolation of `splits`) step by step. The two give identical marks on simulated runs. If you change a rule here, change it there too. See [[Android plugin|Android-Plugin]].
 
 ## Testing in Node
 

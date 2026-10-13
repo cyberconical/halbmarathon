@@ -43,7 +43,7 @@ window.HM_I18N = { de: {
 - Placeholders such as `{n}` must appear in the translation too; their order may change.
 - The same English text always has the same translation. If one English word needs two different German words in two places, use two different English texts (for example “Done” for a finished run and “Completed” for a checked goal).
 
-The catalog currently has 524 entries.
+The catalog currently has 556 entries.
 
 ## Stored values are not translated
 

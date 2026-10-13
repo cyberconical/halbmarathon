@@ -21,6 +21,21 @@ The recording only tracks. It does **not** read the session description, splits 
 
 Older versions recognized intervals and vibrated at each change. New recordings no longer store segments (`trk.iv` is empty). Segments of runs recorded earlier stay stored but are no longer shown.
 
+## Voice announcements
+
+Optional, off by default (Settings, GPS and route). Every 500 m or 1 km the phone says, for example:
+
+- first mark: “500 metres. Pace six twelve per kilometre. Average six twelve.”
+- later marks: “1 kilometre. Pace six ten. Average six eleven.”
+
+“Pace” is the pace of the last stretch since the previous announcement, “Average” the pace of the whole run so far (active time, so pauses do not count). The text is always English, whatever the language of the app or the phone. It uses the phone's own text-to-speech, so nothing is downloaded and it works offline if an offline English voice is installed (the app prefers one).
+
+- **Screen off:** works. The service counts the distance itself with the same rules as the screen (see [[Analysis engine|Analysis-Engine]]), so announcements do not wait for the app.
+- **Music and podcasts:** turned down while the voice speaks, then back to normal. They are not stopped.
+- **No English voice:** the live screen says so and nothing is spoken. Install English voice data in the Android settings under Text-to-speech output. **Test voice** in the settings checks this without a run.
+- **Poor GPS:** the announced pace is only as good as the distance. With test mode on and no GPS speed reading, distance can be far off (see [[Settings|Settings]]), so announcements are too.
+- Pausing stops the counting. Nothing is announced while paused.
+
 ## Privacy zone
 
 Around the starting point lies an area whose points are **never stored**. Distance and time still count in full. You choose the size in Settings: off, 150 m, 300 m (default), 500 m or 1 km. The radius varies randomly by 15 percent per run, and the center is never stored. The zone also applies at the end of the run, when you are back at the start. It protects against the obvious but is no substitute for caution: someone who knows your route can guess the area.
