@@ -874,6 +874,7 @@ window.HM_I18N = { de: {
 "Every 500 m": "Alle 500 m",
 "Every 1 km": "Jeden Kilometer",
 "Every 10 m (test)": "Alle 10 m (Test)",
+"The 10 m test step counts raw GPS movement and speaks about every 12 seconds, even if you stand still. The distances it says are not real.": "Der 10-m-Teststep zählt die rohe GPS-Bewegung und spricht etwa alle 12 Sekunden, auch im Stehen. Die genannten Strecken sind nicht echt.",
 "Voice announcements are off for this run.": "Sprachansagen sind für diesen Lauf aus.",
 "A change in Settings applies from the next run.": "Eine Änderung in den Einstellungen gilt ab dem nächsten Lauf.",
 "While recording, a voice says the distance, the pace of the last stretch and your average pace per kilometer. Always in English. It needs an English voice in the phone's text-to-speech settings. Music is turned down briefly, not stopped.": "Während der Aufzeichnung sagt eine Stimme die Strecke, das Tempo des letzten Abschnitts und dein Durchschnittstempo pro Kilometer an. Immer auf Englisch. Dafür braucht das Handy in den Einstellungen zur Sprachausgabe eine englische Stimme. Musik wird kurz leiser, nicht angehalten.",
@@ -3281,6 +3282,7 @@ function renderSettings(){
         ${nativeTracker()?`<div class="full"><label>${tr("Voice announcements")}</label>
           ${chipRow([[0,tr("Off")],[500,tr("Every 500 m")],[1000,tr("Every 1 km")]].concat(state.gps.test?[[10,tr("Every 10 m (test)")]]:[]), state.gps.voice, "data-gvoice")}
           <p class="hint">${tr("While recording, a voice says the distance, the pace of the last stretch and your average pace per kilometer. Always in English. It needs an English voice in the phone's text-to-speech settings. Music is turned down briefly, not stopped.")}</p>
+          ${state.gps.voice===10?`<p class="hint">${tr("The 10 m test step counts raw GPS movement and speaks about every 12 seconds, even if you stand still. The distances it says are not real.")}</p>`:""}
           <div class="chips"><button type="button" class="chip" data-vtest>${tr("Test voice")}</button></div></div>`
         :`<div class="full"><label>${tr("Voice announcements")}</label><p class="hint">${tr("Voice announcements only exist in the Android app.")}</p></div>`}
       </div>
